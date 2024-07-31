@@ -83,7 +83,7 @@ fn setup_scene(
     // sphere
     commands.spawn(PbrBundle {
         mesh: meshes.add(Sphere::new(0.5).mesh().ico(4).unwrap()),
-        material: materials.add(Color::srgb(0.1, 0.9, 0.1)),
+        material: materials.add(Color::srgb(0.1, 0.1, 0.9)),
         transform: Transform::from_xyz(1.5, 1.5, 1.5),
         ..default()
     });
