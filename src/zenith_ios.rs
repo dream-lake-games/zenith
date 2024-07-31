@@ -83,7 +83,7 @@ fn setup_scene(
     // sphere
     commands.spawn(PbrBundle {
         mesh: meshes.add(Sphere::new(0.5).mesh().ico(4).unwrap()),
-        material: materials.add(Color::srgb(0.1, 0.1, 0.9)),
+        material: materials.add(Color::srgb(0.9, 0.1, 0.1)),
         transform: Transform::from_xyz(1.5, 1.5, 1.5),
         ..default()
     });
@@ -162,7 +162,7 @@ fn button_handler(
 
 fn setup_music(asset_server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn(AudioBundle {
-        source: asset_server.load("sounds/Windless Slopes.ogg"),
+        source: asset_server.load("music/Elegy.ogg"),
         settings: PlaybackSettings::LOOP,
     });
 }

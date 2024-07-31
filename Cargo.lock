@@ -751,13 +751,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_mobile_example"
-version = "0.0.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
 name = "bevy_pbr"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4274,6 +4267,13 @@ name = "xml-rs"
 version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "791978798f0597cfc70478424c2b4fdc2b7a8024aaff78497ef00f24ef674193"
+
+[[package]]
+name = "zenith"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+]
 
 [[package]]
 name = "zerocopy"

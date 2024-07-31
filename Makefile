@@ -1,17 +1,17 @@
-.PHONY: xcodebuild run install boot-sim generate clean
+.PHONY: xcodebuild ios-sim install boot-ios-sim generate clean
 
 DEVICE = ${DEVICE_ID}
 ifndef DEVICE_ID
 	DEVICE=$(shell xcrun simctl list devices 'iOS' | grep -v 'unavailable' | grep -v '^--' | grep -v '==' | head -n 1 | grep -E -o -i "([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})")
 endif
 
-run: install
-	xcrun simctl launch --console $(DEVICE) org.bevyengine.example
+ios-sim: install
+	xcrun simctl launch --console $(DEVICE) org.dreamlake.zenith
 
-boot-sim:
+boot-ios-sim:
 	xcrun simctl boot $(DEVICE) || true
 
-install: xcodebuild-simulator boot-sim
+install: xcodebuild-simulator boot-ios-sim
 	xcrun simctl install $(DEVICE) build/Build/Products/Debug-iphonesimulator/zenith.app
 
 xcodebuild-simulator:
