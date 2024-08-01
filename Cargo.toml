@@ -8,7 +8,11 @@ description = "Explore the cosmos..."
 [lib]
 name = "zenith"
 path = "src/zenith.rs"
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[[bin]]
+name = "desktop"
+path = "src/main.rs"
 
 [dependencies]
 bevy = { version = "0.14.0" }

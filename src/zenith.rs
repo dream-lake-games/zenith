@@ -9,7 +9,7 @@ use bevy::{
 
 // the `bevy_main` proc_macro generates the required boilerplate for iOS and Android
 #[bevy_main]
-fn main() {
+pub fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
@@ -27,7 +27,7 @@ fn main() {
     .run();
 }
 
-fn touch_camera(
+pub fn touch_camera(
     windows: Query<&Window>,
     mut touches: EventReader<TouchInput>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
