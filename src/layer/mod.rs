@@ -6,7 +6,8 @@ use bevy::render::{
     texture::BevyDefault,
     view::RenderLayers,
 };
-use bevy::sprite::MaterialMesh2dBundle;
+use bevy::sprite::{Material2dPlugin, MaterialMesh2dBundle};
+use bevy::window::WindowResized;
 use mats::BlendTexturesMaterial;
 
 use crate::{prelude::*, tran_tran};
@@ -24,43 +25,37 @@ pub struct LightLayer;
 #[derive(Component, Debug, Reflect, Default)]
 pub struct MenuLayer;
 
-trait CameraLayerInternal {
-    const RENDER_LAYER: usize;
-}
-pub trait CameraLayer: CameraLayerInternal {
+pub trait CameraLayer {
+    const _RENDER_LAYER: usize;
+
     fn layer() -> usize {
-        Self::RENDER_LAYER
+        Self::_RENDER_LAYER
     }
 
     fn render_layers() -> RenderLayers {
-        RenderLayers::from_layers(&[Self::RENDER_LAYER])
+        RenderLayers::from_layers(&[Self::_RENDER_LAYER])
     }
 }
 
-impl CameraLayerInternal for BgSpriteLayer {
-    const RENDER_LAYER: usize = 1;
+impl CameraLayer for BgSpriteLayer {
+    const _RENDER_LAYER: usize = 1;
 }
-impl CameraLayer for BgSpriteLayer {}
-impl CameraLayerInternal for BgLightLayer {
-    const RENDER_LAYER: usize = 2;
+impl CameraLayer for BgLightLayer {
+    const _RENDER_LAYER: usize = 2;
 }
-impl CameraLayer for BgLightLayer {}
-impl CameraLayerInternal for SpriteLayer {
-    const RENDER_LAYER: usize = 3;
+impl CameraLayer for SpriteLayer {
+    const _RENDER_LAYER: usize = 3;
 }
-impl CameraLayer for SpriteLayer {}
-impl CameraLayerInternal for LightLayer {
-    const RENDER_LAYER: usize = 4;
+impl CameraLayer for LightLayer {
+    const _RENDER_LAYER: usize = 4;
 }
-impl CameraLayer for LightLayer {}
-impl CameraLayerInternal for MenuLayer {
-    const RENDER_LAYER: usize = 5;
+impl CameraLayer for MenuLayer {
+    const _RENDER_LAYER: usize = 5;
 }
-impl CameraLayer for MenuLayer {}
 
 /// Grows all of the layers by a given scale.
 /// Makes it easy for the game to fill the screen in a satisfying way.
-#[derive(Resource)]
+#[derive(Resource, Clone, Copy)]
 pub struct LayerGrowth {
     scale: f32,
 }
@@ -74,7 +69,7 @@ impl Default for LayerGrowth {
 }
 
 /// Configures the clear colors and ambient light of the layers.
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct LayerColors {
     bg_clear_color: ClearColorConfig,
     bg_ambient_light: ClearColorConfig,
@@ -241,6 +236,7 @@ fn setup_layer_materials(
                         ..default()
                     },
                     combined_layer.clone(),
+                    ResizeQuad,
                 ))
                 .set_parent(root.eid());
         }};
@@ -249,15 +245,18 @@ fn setup_layer_materials(
     spawn_layer_mat_mesh!("fg_layer_quad", PP_QUAD, PP_MATERIAL, 2.0);
 
     // Menu layer is special
-    commands.spawn((
-        Name::new("menu_layer_quad"),
-        SpriteBundle {
-            transform: tran_tran!(Vec3::Z * 3.0),
-            texture: MENU_MATERIAL,
-            ..default()
-        },
-        combined_layer.clone(),
-    ));
+    commands
+        .spawn((
+            Name::new("menu_layer_quad"),
+            SpriteBundle {
+                transform: tran_tran!(Vec3::Z * 3.0),
+                texture: MENU_MATERIAL,
+                ..default()
+            },
+            combined_layer.clone(),
+            ResizeQuad,
+        ))
+        .set_parent(root.eid());
 
     // This is the camera that sees all of the layer quads and squashes them into one image
     commands
@@ -344,14 +343,38 @@ fn setup_layer_cameras(
     );
 }
 
+/// Marks a layer quad as needing to resize on window resize events
+#[derive(Component)]
+struct ResizeQuad;
+
+fn resize_canvases(
+    mut events: EventReader<WindowResized>,
+    mut quad_trans: Query<&mut Transform, With<ResizeQuad>>,
+) {
+    let Some(event) = events.read().last() else {
+        return;
+    };
+
+    // Mult is smallest to fill either vertically or horizontally
+    // A.k.a don't cut anything off
+    let width_mult = event.width / IDEAL_WIDTH_f32;
+    let height_mult = event.height / IDEAL_HEIGHT_f32;
+    let mult = width_mult.min(height_mult);
+
+    // Then update the layering quads
+    for mut tran in &mut quad_trans {
+        tran.scale = (Vec2::ONE * mult).extend(1.0);
+    }
+}
+
 #[derive(Default)]
-pub(super) struct LayeringPlugin {
+pub(super) struct LayerPlugin {
     ideal_size: UVec2,
     menu_growth: u32,
     layer_colors: LayerColors,
     layer_growth: LayerGrowth,
 }
-impl LayeringPlugin {
+impl LayerPlugin {
     pub fn new(ideal_size: UVec2, menu_growth: u32) -> Self {
         Self {
             ideal_size,
@@ -359,13 +382,21 @@ impl LayeringPlugin {
             ..default()
         }
     }
-    impl_get_set_with!(layer_colors, LayerColors);
+
+    impl_get_set_with_cloned!(layer_colors, LayerColors);
     impl_get_set_with!(layer_growth, LayerGrowth);
 }
-impl Plugin for LayeringPlugin {
+impl Plugin for LayerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LayerColors::default());
-        app.insert_resource(CameraTargets::default());
+        app.insert_resource(self.layer_colors.clone());
+        app.insert_resource(self.layer_growth.clone());
+        let cam_targets = CameraTargets {
+            ideal_size: self.ideal_size,
+            menu_growth: self.menu_growth,
+            ..default()
+        };
+        app.insert_resource(cam_targets);
+        app.add_plugins(Material2dPlugin::<BlendTexturesMaterial>::default());
 
         app.add_systems(
             Startup,
@@ -373,5 +404,6 @@ impl Plugin for LayeringPlugin {
                 .chain()
                 .after(RootInit),
         );
+        app.add_systems(Update, resize_canvases);
     }
 }

@@ -41,14 +41,17 @@ pub use scale_tran;
 macro_rules! impl_get_set_with {
     ($field:ident, $type:ty) => {
         paste::paste! {
+            #[allow(unused)]
             pub fn [<get_ $field>](&self) -> $type {
                 self.$field
             }
 
+            #[allow(unused)]
             pub fn [<set_ $field>](&mut self, val: $type) {
                 self.$field = val;
             }
 
+            #[allow(unused)]
             pub fn [<with_ $field>](mut self, val: $type) -> Self {
                 self.$field = val;
                 self
@@ -57,3 +60,28 @@ macro_rules! impl_get_set_with {
     };
 }
 pub use impl_get_set_with;
+
+/// Implements `get`, `set` and `with` for a field that cannot be copied and must be cloned
+#[macro_export]
+macro_rules! impl_get_set_with_cloned {
+    ($field:ident, $type:ty) => {
+        paste::paste! {
+            #[allow(unused)]
+            pub fn [<get_ $field>](&self) -> $type {
+                self.$field.clone()
+            }
+
+            #[allow(unused)]
+            pub fn [<set_ $field>](&mut self, val: $type) {
+                self.$field = val;
+            }
+
+            #[allow(unused)]
+            pub fn [<with_ $field>](mut self, val: $type) -> Self {
+                self.$field = val;
+                self
+            }
+        }
+    };
+}
+pub use impl_get_set_with_cloned;
