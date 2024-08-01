@@ -105,8 +105,8 @@ fn setup_scene(
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         // MSAA makes some Android devices panic, this is under investigation
         // https://github.com/bevyengine/bevy/issues/8229
-        #[cfg(target_os = "android")]
-        msaa: Msaa::Off,
+        // #[cfg(target_os = "android")]
+        // msaa: Msaa::Off,
         ..default()
     });
 

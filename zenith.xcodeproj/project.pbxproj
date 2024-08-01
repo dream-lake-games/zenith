@@ -291,7 +291,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lzenith_ios",
+					"-lzenith",
 					"-lc++abi",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.dreamlake.zenith;
@@ -400,7 +400,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lzenith_ios",
+					"-lzenith",
 					"-lc++abi",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.dreamlake.zenith;

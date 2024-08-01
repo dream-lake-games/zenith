@@ -23,3 +23,6 @@ xcodebuild-iphone:
 clean:
 	rm -r build
 	cargo clean
+
+android-sim:
+	cargo apk run -p zenith

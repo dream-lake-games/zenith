@@ -6,8 +6,8 @@ edition = "2021"
 description = "Explore the cosmos..."
 
 [lib]
-name = "zenith_ios"
-path = "src/zenith_ios.rs"
+name = "zenith"
+path = "src/zenith.rs"
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
@@ -16,18 +16,18 @@ bevy = { version = "0.14.0" }
 [target.aarch64-apple-ios-sim.dependencies]
 bevy = { version = "0.14.0", features = ["ios_simulator"] }
 
-# [package.metadata.android]
-# package = "org.bevyengine.example"
-# apk_name = "bevyexample"
-# assets = "../../assets"
-# resources = "../../assets/android-res"
-# # This strips debug symbols from the shared libraries, drastically reducing APK size. If you need them, remove the option.
-# strip = "strip"
-# build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+[package.metadata.android]
+package = "org.dreamlake.zenith"
+apk_name = "zenith"
+assets = "assets"
+resources = "assets/android-res"
+# This strips debug symbols from the shared libraries, drastically reducing APK size. If you need them, remove the option.
+strip = "strip"
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
 
-# [package.metadata.android.sdk]
-# target_sdk_version = 31
+[package.metadata.android.sdk]
+target_sdk_version = 34
 
-# [package.metadata.android.application]
+[package.metadata.android.application]
 # icon = "@mipmap/ic_launcher"
-# label = "Bevy Example"
+label = "zenith-label"
