@@ -4273,6 +4273,7 @@ name = "zenith"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "paste",
 ]
 
 [[package]]

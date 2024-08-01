@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 bevy = { version = "0.14.0" }
+paste = "1.0.15"
 
 [target.aarch64-apple-ios-sim.dependencies]
 bevy = { version = "0.14.0", features = ["ios_simulator"] }
