@@ -8,11 +8,11 @@ use bevy::render::{
 };
 use bevy::sprite::{Material2dPlugin, MaterialMesh2dBundle};
 use bevy::window::WindowResized;
-use mats::BlendTexturesMaterial;
+use mat::BlendTexturesMaterial;
 
 use crate::{prelude::*, tran_tran};
 
-mod mats;
+mod mat;
 
 #[derive(Component, Debug, Reflect, Default)]
 pub struct BgSpriteLayer;
@@ -254,7 +254,6 @@ fn setup_layer_materials(
                 ..default()
             },
             combined_layer.clone(),
-            ResizeQuad,
         ))
         .set_parent(root.eid());
 

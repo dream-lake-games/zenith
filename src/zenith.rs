@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::WindowMode};
 
+pub mod animation;
 pub mod consts;
 pub mod debug;
 pub mod input;
@@ -9,8 +10,8 @@ pub mod roots;
 pub mod state;
 
 pub mod prelude {
+    pub use super::animation::*;
     pub use super::consts::*;
-    pub use super::debug::*;
     pub use super::input::*;
     pub use super::layer::*;
     pub use super::macros::*;
@@ -18,6 +19,7 @@ pub mod prelude {
     pub use super::state::*;
     pub use bevy::input::common_conditions::input_toggle_active;
     pub use bevy::prelude::*;
+    pub use bevy::render::view::*;
     pub use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 }
 
@@ -29,6 +31,7 @@ pub fn launch_app(mut app: App) {
         consts::IDEAL_VEC,
         consts::MENU_GROWTH,
     ));
+    app.add_plugins(animation::AnimationPlugin);
     app.add_plugins(roots::RootPlugin);
     app.run();
 }

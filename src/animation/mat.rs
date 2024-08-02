@@ -1,0 +1,59 @@
+use crate::prelude::*;
+use bevy::render::render_resource::{AsBindGroup, ShaderRef};
+use bevy::sprite::Material2d;
+
+#[derive(AsBindGroup, Debug, Clone, Asset, Reflect, PartialEq)]
+pub(super) struct AnimationMaterial {
+    #[texture(1)]
+    #[sampler(2)]
+    texture: Handle<Image>,
+    // The below need to be packed into Vec4 for wasm where stuff has to be 16-byte aligned
+    #[uniform(3)]
+    ix_length_flipx_flipy: Vec4, // NOTE: 1.0 = don't flip, -1.0 = flip
+    #[uniform(4)]
+    xoff_yoff_xrep_yrep: Vec4,
+    #[uniform(5)]
+    rgba: Vec4,
+}
+impl AnimationMaterial {
+    const fn flip_to_mul(val: bool) -> f32 {
+        if val {
+            -1.0
+        } else {
+            1.0
+        }
+    }
+
+    pub(super) fn new(
+        texture: Handle<Image>,
+        length: u32,
+        flip_x: bool,
+        flip_y: bool,
+        repetitions: Vec2,
+        color: Color,
+    ) -> Self {
+        let srgba_thing = color.to_srgba();
+        Self {
+            texture,
+            ix_length_flipx_flipy: Vec4::new(
+                0.0,
+                length as f32,
+                Self::flip_to_mul(flip_x),
+                Self::flip_to_mul(flip_y),
+            ),
+            xoff_yoff_xrep_yrep: Vec4::new(0.0, 0.0, repetitions.x, repetitions.y),
+            rgba: Vec4::new(
+                srgba_thing.red,
+                srgba_thing.green,
+                srgba_thing.blue,
+                srgba_thing.alpha,
+            ),
+        }
+    }
+}
+
+impl Material2d for AnimationMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/animation_mat.wgsl".into()
+    }
+}
