@@ -239,19 +239,18 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
 }
 
 fn play_animations<StateMachine: AnimationStateMachine>(
-    mut managers: Query<&mut AnimationManager<StateMachine>>,
+    mut commands: Commands,
+    mut managers: Query<(Entity, &mut AnimationManager<StateMachine>, Option<&Dying>)>,
     mut bodies: Query<(
-        Entity,
         &mut AnimationIndex<StateMachine>,
         &Handle<AnimationMaterial>,
         &Parent,
     )>,
     mut mats: ResMut<Assets<AnimationMaterial>>,
-    // TODO: BULLET TIME PATCHWORK NEEDED HERE
-    time: Res<Time>,
+    bullet_time: Res<BulletTime>,
 ) {
-    for (eid, mut index, hand, parent) in &mut bodies {
-        index.time += time.delta_seconds();
+    for (mut index, hand, parent) in &mut bodies {
+        index.time += bullet_time.delta_seconds();
         if index.time < index.spf {
             // No update is happening to this body, can just continue
             continue;
@@ -276,15 +275,15 @@ fn play_animations<StateMachine: AnimationStateMachine>(
                 }
                 AnimationNextState::Some(variant) => {
                     // Transitioning to a new state
-                    let mut manager = managers.get_mut(parent.get()).unwrap();
+                    let (_eid, mut manager, _) = managers.get_mut(parent.get()).unwrap();
                     manager.reset_state(variant);
                 }
                 AnimationNextState::HideThenDie(dying_time) => {
                     // Triggering the death process for this entity
-                    // TODO: Rn this is just looping, need to add my own lifecycle stuff
-                    index.ix = 0;
-                    let mat = mats.get_mut(hand.id()).unwrap();
-                    mat.set_ix(index.ix);
+                    let (eid, _, already_dying) = managers.get(parent.get()).unwrap();
+                    if !already_dying.is_some() {
+                        commands.entity(eid).insert(Dying::new(dying_time));
+                    }
                 }
             }
         }

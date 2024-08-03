@@ -29,7 +29,7 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
     config.render_layers = SpriteLayer::render_layers();
 }
 
-pub(super) struct DebugPlugin;
+pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(FrameTimeDiagnosticsPlugin);

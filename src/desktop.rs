@@ -24,5 +24,7 @@ pub fn generate_desktop_app() -> App {
 
 struct DesktopPlugin;
 impl Plugin for DesktopPlugin {
-    fn build(&self, app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.add_plugins(DebugPlugin);
+    }
 }

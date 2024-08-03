@@ -67,6 +67,7 @@ fn test_startup(mut commands: Commands) {
 fn test_update(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut managers: Query<&mut AnimationManager<AnimationLenny>>,
+    mut bullet_time: ResMut<BulletTime>,
 ) {
     for mut manager in &mut managers {
         if keyboard.just_pressed(KeyCode::KeyF) {
@@ -75,6 +76,12 @@ fn test_update(
         if keyboard.just_pressed(KeyCode::KeyE) {
             manager.set_state(AnimationLenny::DieEgg);
         }
+    }
+    if keyboard.just_pressed(KeyCode::BracketLeft) {
+        bullet_time.set_normal();
+    }
+    if keyboard.just_pressed(KeyCode::BracketRight) {
+        bullet_time.set_slow();
     }
 }
 
