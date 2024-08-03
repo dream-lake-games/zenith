@@ -1,136 +1,301 @@
+use bevy::{reflect::GetTypeRegistration, sprite::Mesh2dHandle};
+
 use crate::prelude::*;
 
-/// Let's map out ideal usage first
-///
-/// IDEA TO TRY: Separate the use cases of textures and animations
-/// -> Problem: Think of the spring, need to support animated textures
-/// -> Maybe solution: keep the same (pretty) powerful animation mat but just
-///    make separate macros for the use cases?
-/// -> Maybe solution: keep the same (pretty) powerful animation mat, but make separete
-///    macros and also separate components to mange ecs? (I think I like this more)
-/// -> Design goal: Let's seee how dead simple we can make animations
-///
-/// animation_bundle!(
-///     AnimationLenny,
-///     bodies: [
-///         fly: {
-///             path: "lenny/fly.png", [REQUIRED]
-///             size: (16, 16), [REQUIRED]
-///             length: 3, [OPTIONAL (assumed 1)]
-///             fps: 12.0, [OPTIONAL (assumed DEFAULT_ANIMATION_FPS)]
-///             color: Color::WHITE, [OPTIONAL (assumed Color::WHITE)]
-///             offset: (x, y, z) [OPTIONAL (assumed (0, 0, 0))]
-///             scale: (x, y) [OPTIONAL (assumed (1, 1))]
-///             render_layers: expr [OPTIONAL (assumed SpriteLayer::render_layers())]
-///         },
-///         light: {
-///             path: "lenny/light.png",
-///             size: (64, 64),
-///         }
-///         fall: {
-///             ...assume this existed...
-///         }
-///     ],
-///     states: [
-///         Fly: {
-///             bodies: [
-///                 fly: {
-///                     override_offset: (x, y, z) [OPTIONAL, if set will override what is set in bodies],
-///                     override_scale: (x, y) [OPTIONAL, if set will override what is set in bodies],
-///                     override_color: expr [OPTIONAL, if set will override what is set in bodies],
-///                 },
-///                 light,
-///             ],
-///             next: Fall,
-///         },
-///         Fall: {
-///             bodies: [
-///                 fall,
-///                 light,
-///             ],
-///             next: HideAndDie(f32), (after the animation of the FIRST BODY finishes, hide this animation and insert Dying(f32),
-///         }
-///         Stable: {
-///             bodies: [
-///                 fly,
-///                 light,
-///             ]
-///         }
-///     ],
-///     properties: { // This whole field is optional
-///         hidden: bool, [OPTIONAl (assumed false)]
-///         flip_x: bool, [OPTIONAL (assumed false)]
-///         flip_y: bool, [OPTIONAL (assumed false)]
-///         flip_y: bool, [OPTIONAL (assumed false)]
-///     }
-/// )
-///
-/// Now going to write (below DUmmy) what code this should produce
-///
-struct DUmmy;
+use super::mat::AnimationMaterial;
 
-struct BodyData {
-    path: String,
-    size: UVec2,
-    length: u32,
-    fps: f32,
-    color: Color,
-    offset: Vec3,
-    scale: Vec2,
-    render_layers: RenderLayers,
+#[derive(Debug, Clone, Reflect)]
+pub struct BodyData {
+    pub(super) path: String,
+    pub(super) size: UVec2,
+    pub(super) length: u32,
+    pub(super) fps: f32,
+    pub(super) color: Color,
+    pub(super) offset: Vec3,
+    pub(super) scale: Vec2,
+    pub(super) render_layers: RenderLayers,
 }
-
-#[derive(Default)]
-struct BodyDataOverrides {
-    override_offset: Option<Vec3>,
-    override_scale: Option<Vec2>,
-    override_color: Option<Color>,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-enum AnimationLennyFile {
-    #[allow(nonstandard_style)]
-    fly,
-    #[allow(nonstandard_style)]
-    light,
-    #[allow(nonstandard_style)]
-    fall,
-}
-impl AnimationLennyFile {
-    fn to_body_data(&self) -> BodyData {
-        todo!("boilerplate")
+impl BodyData {
+    fn with_overrides(mut self, overrides: BodyDataOverrides) -> Self {
+        self.offset = overrides.override_offset.unwrap_or(self.offset);
+        self.scale = overrides.override_scale.unwrap_or(self.scale);
+        self.color = overrides.override_color.unwrap_or(self.color);
+        self
     }
 }
 
-struct StateData<NextType, BodyType> {
-    overwritten_bodies: Vec<(BodyType, BodyDataOverrides)>,
-    next: Option<NextType>,
+#[derive(Default, Debug, Clone, Reflect)]
+pub(super) struct BodyDataOverrides {
+    pub(super) override_offset: Option<Vec3>,
+    pub(super) override_scale: Option<Vec2>,
+    pub(super) override_color: Option<Color>,
 }
 
-trait AnimationStateMachine: Sized {
-    type FileType;
+pub trait AnimationBody {
+    fn to_body_data(&self) -> BodyData;
+}
+
+#[derive(Debug, Clone, Reflect, PartialEq)]
+pub(super) enum AnimationNextState<NextType> {
+    None,
+    Some(NextType),
+    HideThenDie(f32),
+}
+
+#[derive(Debug, Clone, Reflect)]
+pub struct StateData<NextType, BodyType: AnimationBody> {
+    pub(super) overwritten_bodies: Vec<(BodyType, BodyDataOverrides)>,
+    pub(super) next: AnimationNextState<NextType>,
+}
+
+pub trait AnimationStateMachine:
+    Sized
+    + Copy
+    + Send
+    + Sync
+    + 'static
+    + std::fmt::Debug
+    + Default
+    + PartialEq
+    + Eq
+    + Reflect
+    + FromReflect
+    + TypePath
+    + GetTypeRegistration
+{
+    type FileType: AnimationBody;
 
     fn to_state_data(&self) -> StateData<Self, Self::FileType>;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AnimationLenny {
-    Fly,
-    Fall,
-    Stable,
+#[derive(Debug, Clone, Component, Reflect)]
+pub struct AnimationManager<StateMachine: AnimationStateMachine> {
+    pub(super) state: StateMachine,
+    pub(super) hidden: bool,
+    pub(super) flip_x: bool,
+    pub(super) flip_y: bool,
 }
+impl<StateMachine: AnimationStateMachine> AnimationManager<StateMachine> {
+    pub fn new() -> Self {
+        Self {
+            state: default(),
+            hidden: false,
+            flip_x: false,
+            flip_y: false,
+        }
+    }
 
-impl AnimationStateMachine for AnimationLenny {
-    type FileType = AnimationLennyFile;
-
-    fn to_state_data(&self) -> StateData<Self, Self::FileType> {
-        StateData {
-            overwritten_bodies: todo!("boilerplate?"),
-            next: todo!("boilerplate!?"),
+    impl_get!(state, StateMachine);
+    impl_with!(state, StateMachine);
+    impl_get!(hidden, bool);
+    impl_with!(hidden, bool);
+    impl_get!(flip_x, bool);
+    impl_with!(flip_x, bool);
+    impl_get!(flip_y, bool);
+    impl_with!(flip_y, bool);
+}
+macro_rules! impl_mutable_animation_manager_field {
+    ($field:ident, $type:ty) => {
+        paste::paste! {
+            fn [<set_ $field>](&mut self, val: $type) {
+                if val == self.$field {
+                    return;
+                }
+                self.$field = val;
+            }
+            fn [<reset_ $field>](&mut self, val: $type) {
+                self.$field = val;
+            }
+        }
+    };
+}
+pub trait MutableAnimationManagerActions<StateMachine: AnimationStateMachine> {
+    /// Sets the currently value of the animation manager state, doing nothing if the value is the same
+    fn set_state(&mut self, state: StateMachine);
+    /// Resets the currently value of the animation manager state, triggering change even if the value is the same
+    fn reset_state(&mut self, state: StateMachine);
+    /// Sets the currently value of the animation manager hidden, doing nothing if the value is the same
+    fn set_hidden(&mut self, hidden: bool);
+    /// Resets the currently value of the animation manager hidden, triggering change even if the value is the same
+    fn reset_hidden(&mut self, hidden: bool);
+    /// Sets the currently value of the animation manager flip_x, doing nothing if the value is the same
+    fn set_flip_x(&mut self, flip_x: bool);
+    /// Resets the currently value of the animation manager flip_x, triggering change even if the value is the same
+    fn reset_flip_x(&mut self, flip_x: bool);
+    /// Sets the currently value of the animation manager flip_y, doing nothing if the value is the same
+    fn set_flip_y(&mut self, flip_y: bool);
+    /// Resets the currently value of the animation manager flip_y, triggering change even if the value is the same
+    fn reset_flip_y(&mut self, flip_y: bool);
+}
+impl<'w, StateMachine: AnimationStateMachine> MutableAnimationManagerActions<StateMachine>
+    for Mut<'w, AnimationManager<StateMachine>>
+{
+    impl_mutable_animation_manager_field!(state, StateMachine);
+    impl_mutable_animation_manager_field!(hidden, bool);
+    impl_mutable_animation_manager_field!(flip_x, bool);
+    impl_mutable_animation_manager_field!(flip_y, bool);
+}
+#[derive(Bundle)]
+pub struct AnimationManagerBundle<StateMachine: AnimationStateMachine> {
+    manager: AnimationManager<StateMachine>,
+}
+impl<StateMachine: AnimationStateMachine> AnimationManagerBundle<StateMachine> {
+    pub fn new() -> Self {
+        Self {
+            manager: AnimationManager::new(),
         }
     }
 }
 
-struct AnimationManager<StateMachine: AnimationStateMachine> {
-    current_state: StateMachine,
+/// For tracking animations that play
+#[derive(Component, Debug, Clone, Reflect)]
+struct AnimationIndex<StateMachine: AnimationStateMachine> {
+    ix: u32,
+    length: u32,
+    time: f32,
+    /// Seconds per frame
+    spf: f32,
+    /// The state to transition to after this state. Note that this has a None variant inside it.
+    next: AnimationNextState<StateMachine>,
+}
+
+/// Attached to the body of the animation that (when finished) triggers the state transition
+#[derive(Component, Debug, Clone, Reflect)]
+struct AnimationNextBurden<StateMachine: AnimationStateMachine> {
+    next_state: AnimationNextState<StateMachine>,
+}
+
+#[derive(Bundle)]
+struct BodyDataBundle<StateMachine: AnimationStateMachine> {
+    name: Name,
+    mesh: Mesh2dHandle,
+    material: Handle<AnimationMaterial>,
+    spatial: SpatialBundle,
+    render_layers: RenderLayers,
+    index: AnimationIndex<StateMachine>,
+}
+impl<StateMachine: AnimationStateMachine> BodyDataBundle<StateMachine> {
+    fn new(
+        data: BodyData,
+        next: AnimationNextState<StateMachine>,
+        ass: &Res<AssetServer>,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        mats: &mut ResMut<Assets<AnimationMaterial>>,
+    ) -> Self {
+        let mesh = Mesh::from(Rectangle::new(data.size.x as f32, data.size.y as f32));
+        Self {
+            name: Name::new("body_data_bundle"),
+            mesh: meshes.add(mesh).into(),
+            material: mats.add(AnimationMaterial::new(
+                ass.load(data.path),
+                data.length,
+                false,
+                false,
+                Vec2::ONE,
+                Color::WHITE,
+            )),
+            spatial: SpatialBundle::from_transform(Transform {
+                translation: data.offset,
+                scale: data.scale.extend(1.0),
+                ..default()
+            }),
+            render_layers: data.render_layers,
+            index: AnimationIndex {
+                ix: 0,
+                length: data.length,
+                time: 0.0,
+                spf: 1.0 / data.fps,
+                next,
+            },
+        }
+    }
+}
+
+fn handle_manager_changes<StateMachine: AnimationStateMachine>(
+    mut commands: Commands,
+    managers: Query<
+        (Entity, &AnimationManager<StateMachine>),
+        Changed<AnimationManager<StateMachine>>,
+    >,
+    ass: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut mats: ResMut<Assets<AnimationMaterial>>,
+) {
+    for (eid, manager) in &managers {
+        println!("got changed event");
+        commands.entity(eid).despawn_descendants();
+        let state_data = manager.get_state().to_state_data();
+        for (ix, (body, overwrite)) in state_data.overwritten_bodies.into_iter().enumerate() {
+            let data = body.to_body_data().with_overrides(overwrite);
+            let next = if ix == 0 {
+                state_data.next.clone()
+            } else {
+                AnimationNextState::None
+            };
+            let body_bund = BodyDataBundle::new(data, next, &ass, &mut meshes, &mut mats);
+            commands.spawn(body_bund).set_parent(eid);
+        }
+    }
+}
+
+fn play_animations<StateMachine: AnimationStateMachine>(
+    mut managers: Query<&mut AnimationManager<StateMachine>>,
+    mut bodies: Query<(
+        Entity,
+        &mut AnimationIndex<StateMachine>,
+        &Handle<AnimationMaterial>,
+        &Parent,
+    )>,
+    mut mats: ResMut<Assets<AnimationMaterial>>,
+    // TODO: BULLET TIME PATCHWORK NEEDED HERE
+    time: Res<Time>,
+) {
+    for (eid, mut index, hand, parent) in &mut bodies {
+        index.time += time.delta_seconds();
+        if index.time < index.spf {
+            // No update is happening to this body, can just continue
+            continue;
+        }
+        index.time = 0.0;
+        if index.ix + 1 < index.length {
+            // Progressing to the next frame of the animation
+            index.ix += 1;
+            let mat = mats.get_mut(hand.id()).unwrap();
+            mat.set_ix(index.ix);
+        } else {
+            match index.next {
+                AnimationNextState::None => {
+                    // Looping the animation
+                    if index.length <= 1 {
+                        // Degen animations don't need to do anything
+                        continue;
+                    }
+                    index.ix = 0;
+                    let mat = mats.get_mut(hand.id()).unwrap();
+                    mat.set_ix(index.ix);
+                }
+                AnimationNextState::Some(variant) => {
+                    // Transitioning to a new state
+                    let mut manager = managers.get_mut(parent.get()).unwrap();
+                    manager.reset_state(variant);
+                }
+                AnimationNextState::HideThenDie(dying_time) => {
+                    // Triggering the death process for this entity
+                    // TODO: Rn this is just looping, need to add my own lifecycle stuff
+                    index.ix = 0;
+                    let mat = mats.get_mut(hand.id()).unwrap();
+                    mat.set_ix(index.ix);
+                }
+            }
+        }
+    }
+}
+
+pub(super) fn register_animation_manager<StateMachine: AnimationStateMachine>(app: &mut App) {
+    app.register_type::<AnimationManager<StateMachine>>();
+    app.add_systems(FixedPostUpdate, handle_manager_changes::<StateMachine>);
+    app.add_systems(
+        FixedUpdate,
+        play_animations::<StateMachine>.in_set(AnimationSet),
+    );
 }

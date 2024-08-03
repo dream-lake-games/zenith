@@ -36,27 +36,56 @@ macro_rules! scale_tran {
 }
 pub use scale_tran;
 
-/// Implements `get`, `set` and `with` for a field
+/// Implements `get` for a field
 #[macro_export]
-macro_rules! impl_get_set_with {
+macro_rules! impl_get {
     ($field:ident, $type:ty) => {
         paste::paste! {
             #[allow(unused)]
             pub fn [<get_ $field>](&self) -> $type {
                 self.$field
             }
+        }
+    };
+}
+pub use impl_get;
 
+/// Implements `set` for a field
+#[macro_export]
+macro_rules! impl_set {
+    ($field:ident, $type:ty) => {
+        paste::paste! {
             #[allow(unused)]
             pub fn [<set_ $field>](&mut self, val: $type) {
                 self.$field = val;
             }
+        }
+    };
+}
+pub use impl_set;
 
+/// Implements `with` for a field
+#[macro_export]
+macro_rules! impl_with {
+    ($field:ident, $type:ty) => {
+        paste::paste! {
             #[allow(unused)]
             pub fn [<with_ $field>](mut self, val: $type) -> Self {
                 self.$field = val;
                 self
             }
         }
+    };
+}
+pub use impl_with;
+
+/// Implements `get`, `set` and `with` for a field
+#[macro_export]
+macro_rules! impl_get_set_with {
+    ($field:ident, $type:ty) => {
+        impl_get!($field, $type);
+        impl_set!($field, $type);
+        impl_with!($field, $type);
     };
 }
 pub use impl_get_set_with;

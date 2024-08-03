@@ -40,16 +40,20 @@ pub fn launch_app(mut app: App) {
 #[bevy_main]
 fn main() {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            resizable: false,
-            mode: WindowMode::BorderlessFullscreen,
-            // on iOS, gestures must be enabled.
-            // This doesn't work on Android
-            recognize_rotation_gesture: true,
-            ..default()
-        }),
-        ..default()
-    }));
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    resizable: false,
+                    mode: WindowMode::BorderlessFullscreen,
+                    // on iOS, gestures must be enabled.
+                    // This doesn't work on Android
+                    recognize_rotation_gesture: true,
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(ImagePlugin::default_nearest()),
+    );
     launch_app(app);
 }

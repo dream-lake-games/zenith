@@ -50,6 +50,10 @@ impl AnimationMaterial {
             ),
         }
     }
+
+    pub(super) fn set_ix(&mut self, ix: u32) {
+        self.ix_length_flipx_flipy[0] = ix as f32;
+    }
 }
 
 impl Material2d for AnimationMaterial {
