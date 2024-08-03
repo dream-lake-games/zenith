@@ -1,5 +1,9 @@
 use crate::prelude::*;
 
+pub mod room;
+
+pub use room::*;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Reflect, States)]
 pub enum AppMode {
     Dev,
@@ -18,18 +22,12 @@ pub enum CutsceneState {}
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Reflect)]
 pub enum TutorialState {}
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Reflect)]
-pub enum LevelState {
-    Loading,
-    Loaded,
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Reflect)]
 pub enum MetaState {
     Menu(MenuState),
     Cutscene(CutsceneState),
     Tutorial(TutorialState),
-    Level(LevelState),
+    Room(RoomState),
     Transition,
 }
 
@@ -38,7 +36,7 @@ pub trait MetaUnfucker {
     fn get_menu_state(&self) -> Option<MenuState>;
     fn get_cutscene_state(&self) -> Option<CutsceneState>;
     fn get_tutorial_state(&self) -> Option<TutorialState>;
-    fn get_level_state(&self) -> Option<LevelState>;
+    fn get_room_state(&self) -> Option<RoomState>;
 }
 impl MetaUnfucker for MetaState {
     fn get_menu_state(&self) -> Option<MenuState> {
@@ -62,9 +60,9 @@ impl MetaUnfucker for MetaState {
         }
     }
 
-    fn get_level_state(&self) -> Option<LevelState> {
+    fn get_room_state(&self) -> Option<RoomState> {
         match self {
-            MetaState::Level(level_state) => Some(level_state.clone()),
+            MetaState::Room(room_state) => Some(room_state.clone()),
             _ => None,
         }
     }
@@ -82,8 +80,8 @@ impl MetaUnfucker for State<MetaState> {
         MetaState::get_tutorial_state(self.get())
     }
 
-    fn get_level_state(&self) -> Option<LevelState> {
-        MetaState::get_level_state(self.get())
+    fn get_room_state(&self) -> Option<RoomState> {
+        MetaState::get_room_state(self.get())
     }
 }
 
@@ -103,7 +101,7 @@ macro_rules! impl_to_meta_state {
 impl_to_meta_state!(MenuState, Menu);
 impl_to_meta_state!(CutsceneState, Cutscene);
 impl_to_meta_state!(TutorialState, Tutorial);
-impl_to_meta_state!(LevelState, Level);
+impl_to_meta_state!(RoomState, Room);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Reflect)]
 pub enum PauseState {
@@ -124,7 +122,7 @@ impl ComputedStates for PhysicsState {
         // Here we convert from our [`AppState`] to all potential [`IsPaused`] versions.
         match sources {
             (MetaState::Tutorial(_), PauseState::Unpaused) => Some(Self::Active),
-            (MetaState::Level(_), PauseState::Unpaused) => Some(Self::Active),
+            (MetaState::Room(_), PauseState::Unpaused) => Some(Self::Active),
             _ => Some(Self::Inactive),
         }
     }
@@ -168,11 +166,16 @@ impl Plugin for StatePlugin {
     fn build(&self, app: &mut App) {
         // Ground truth states
         app.insert_state(AppMode::Dev);
-        app.insert_state(MetaState::Menu(MenuState::Title)); // INITIAL STATE (control f this silly)
+        app.insert_state(MetaState::Room(RoomState::xth_encounter(
+            EncounterKind::SimpOnly,
+            1,
+        ))); // INITIAL STATE (control f this silly)
         app.insert_state(MetaTransitionState::Stable);
         app.insert_state(PauseState::Unpaused);
         // Computed states
         app.add_computed_state::<PhysicsState>();
         app.add_computed_state::<TransitionState>();
+        // Overcrowded states
+        room::register_room_states(app);
     }
 }

@@ -135,17 +135,6 @@ impl<'w, StateMachine: AnimationStateMachine> MutableAnimationManagerActions<Sta
     impl_mutable_animation_manager_field!(flip_x, bool);
     impl_mutable_animation_manager_field!(flip_y, bool);
 }
-#[derive(Bundle)]
-pub struct AnimationManagerBundle<StateMachine: AnimationStateMachine> {
-    manager: AnimationManager<StateMachine>,
-}
-impl<StateMachine: AnimationStateMachine> AnimationManagerBundle<StateMachine> {
-    pub fn new() -> Self {
-        Self {
-            manager: AnimationManager::new(),
-        }
-    }
-}
 
 /// For tracking animations that play
 #[derive(Component, Debug, Clone, Reflect)]

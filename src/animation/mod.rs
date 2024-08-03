@@ -1,14 +1,15 @@
 use bevy::sprite::Material2dPlugin;
-use manager::BodyData;
 
 use crate::prelude::*;
 
-mod defns;
+pub mod defns;
 pub mod macros;
 pub mod manager;
 pub(self) mod mat;
 
+pub use defns::*;
 pub use macros::*;
+pub use manager::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AnimationSet;

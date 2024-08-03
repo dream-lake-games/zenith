@@ -517,16 +517,6 @@ fn move_stuck_static_receiver_dynos(
     }
 }
 
-/// Apply gravity to all entities that have `Gravity` and `DynoTran`
-fn apply_gravity(
-    bullet_time: Res<BulletTime>,
-    mut dynos: Query<(&mut DynoTran, &Gravity), With<PhysicsInitialized>>,
-) {
-    for (mut dyno, gravity) in &mut dynos {
-        dyno.vel -= Vec2::Y * gravity.strength() * bullet_time.delta_seconds();
-    }
-}
-
 pub(super) fn register_logic(app: &mut App) {
     // Reset collisions during preupdate
     app.add_systems(
@@ -555,14 +545,6 @@ pub(super) fn register_logic(app: &mut App) {
         )
             .in_set(CollisionsSet)
             .in_set(PhysicsSet)
-            .after(InputSet)
-            .run_if(in_state(PhysicsState::Active)),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (apply_gravity)
-            .in_set(PhysicsSet)
-            .after(CollisionsSet)
             .after(InputSet)
             .run_if(in_state(PhysicsState::Active)),
     );

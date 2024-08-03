@@ -10,7 +10,7 @@ pub struct ParticlesSet;
 pub struct Particle {
     pos: Vec2,
     vel: Option<Vec2>,
-    gravity: bool,
+    render_layers: RenderLayers,
     internal: ParticleInternal,
 }
 impl Particle {
@@ -18,7 +18,7 @@ impl Particle {
         Self {
             pos,
             vel: None,
-            gravity: false,
+            render_layers: SpriteLayer::render_layers(),
             internal: default(),
         }
     }
@@ -33,8 +33,8 @@ impl Particle {
         self
     }
 
-    pub fn with_gravity(mut self) -> Self {
-        self.gravity = true;
+    pub fn with_render_layers(mut self, layers: RenderLayers) -> Self {
+        self.render_layers = layers;
         self
     }
 
@@ -74,18 +74,18 @@ impl Particle {
 }
 
 /// A particle spawner that should be attached to things with DynoTrans AND either a static or trigger receiver.
-/// This will make it so that during physics, it will spawn a particle every "unit" it travels
+/// This will make it so that during physics, it will spawn particles every "unit" it travels
 /// This makes it so a fast-travelling thing can still create a smooth streak
 #[derive(Component, Reflect)]
 pub struct DynoAwareParticleSpawner {
     pub poses: Vec<Vec2>,
-    pub reference: Particle,
+    pub references: Vec<Particle>,
 }
 impl DynoAwareParticleSpawner {
-    pub fn new(reference: Particle) -> Self {
+    pub fn new(references: Vec<Particle>) -> Self {
         Self {
             poses: vec![Vec2::ZERO],
-            reference,
+            references,
         }
     }
 
@@ -101,9 +101,11 @@ impl DynoAwareParticleSpawner {
 
     pub fn do_spawn(&self, base_pos: Vec2, commands: &mut Commands, proot: &ParticlesRoot) {
         for offset in &self.poses {
-            commands
-                .spawn(self.reference.clone().with_pos(base_pos + *offset))
-                .set_parent(proot.eid());
+            for reference in &self.references {
+                commands
+                    .spawn(reference.clone().with_pos(base_pos + *offset))
+                    .set_parent(proot.eid());
+            }
         }
     }
 }
@@ -113,13 +115,13 @@ impl DynoAwareParticleSpawner {
 #[derive(Component, Reflect)]
 pub struct SimpleParticleSpawner {
     pub poses: Vec<Vec2>,
-    pub reference: Particle,
+    pub references: Vec<Particle>,
 }
 impl SimpleParticleSpawner {
-    pub fn new(reference: Particle) -> Self {
+    pub fn new(references: Vec<Particle>) -> Self {
         Self {
             poses: vec![Vec2::ZERO],
-            reference,
+            references,
         }
     }
 
@@ -135,9 +137,11 @@ impl SimpleParticleSpawner {
 
     pub fn do_spawn(&self, base_pos: Vec2, commands: &mut Commands, proot: &ParticlesRoot) {
         for offset in &self.poses {
-            commands
-                .spawn(self.reference.clone().with_pos(base_pos + *offset))
-                .set_parent(proot.eid());
+            for reference in &self.references {
+                commands
+                    .spawn(reference.clone().with_pos(base_pos + *offset))
+                    .set_parent(proot.eid());
+            }
         }
     }
 }
@@ -187,9 +191,6 @@ impl ParticleInternalBundle {
         ent_comm.set_parent(parent);
         if let Some(vel) = particle.vel {
             ent_comm.insert(DynoTran { vel });
-        }
-        if particle.gravity {
-            ent_comm.insert(Gravity::Normal);
         }
     }
 }

@@ -1,95 +1,42 @@
 use super::manager::*;
 use crate::prelude::*;
 
-defn_animation!(
-    AnimationLenny,
-    bodies: [
-        egg: {
-            path: "play/egg.png",
-            size: (24, 24),
-        },
-        damage: {
-            path: "play/fly_damage.png",
-            size: (24, 24),
-            length: 3,
-            fps: 1.0,
-        },
-        fly: {
-            path: "play/fly.png",
-            size: (24, 24),
-            length: 3,
-        },
-        light: {
-            path: "play/spotlight.png",
-            size: (48, 48),
-            scale: (4.0, 4.0),
-            render_layers: LightLayer::render_layers(),
-        },
-    ],
-    states: [
-        Fly: {
-            parts: [
-                fly,
-                light,
-            ],
-        },
-        Hurt: {
-            parts: [
-                damage,
-                light,
-            ],
-            next: Fly,
-        },
-        DieDamage: {
-            parts: [
-                damage,
-            ],
-            next: DieEgg,
-        },
-        DieEgg: {
-            parts: [
-                egg,
-            ],
-            #[special]
-            next: HideThenDie(1.0),
-        }
-    ],
-);
+pub mod ship_animation;
+
+pub use ship_animation::*;
 
 fn test_startup(mut commands: Commands) {
-    commands.spawn((
-        Name::new("test_entity"),
-        SpatialBundle::default(),
-        AnimationManagerBundle::<AnimationLenny>::new(),
-        StaticTx::from_kind_n_shape(StaticTxKind::Normal, Shape::Circle { radius: 10.0 }),
-        TriggerRx::from_kind_n_shape(TriggerKind::Ship, Shape::Circle { radius: 20.0 }),
-    ));
+    commands.spawn(ShipBundle::new(default()));
 
-    commands.spawn((
-        Name::new("static_rx_entity"),
-        spat_tran!(100.0, 100.0),
-        StaticRx::from_kind_n_shape(StaticRxKind::Normal, Shape::Circle { radius: 30.0 }),
-    ));
+    // commands.spawn((
+    //     Name::new("static_rx_entity"),
+    //     spat_tran!(100.0, 100.0),
+    //     StaticRx::from_kind_n_shape(StaticRxKind::Normal, Shape::Circle { radius: 30.0 }),
+    // ));
 }
 
 fn test_update(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut managers: Query<&mut AnimationManager<AnimationLenny>>,
     mut bullet_time: ResMut<BulletTime>,
+    mut launch: EventReader<Launch>,
+    mut fire: EventReader<Fire>,
+    mut ship: Query<(&mut DynoTran, &mut Transform), With<Ship>>,
 ) {
-    for mut manager in &mut managers {
-        if keyboard.just_pressed(KeyCode::KeyF) {
-            manager.set_state(AnimationLenny::Fly);
-        }
-        if keyboard.just_pressed(KeyCode::KeyE) {
-            manager.set_state(AnimationLenny::DieEgg);
-        }
-    }
     if keyboard.just_pressed(KeyCode::BracketLeft) {
         bullet_time.set_normal();
     }
     if keyboard.just_pressed(KeyCode::BracketRight) {
         bullet_time.set_slow();
+    }
+    for evt in launch.read() {
+        println!("launch!");
+        for (mut dyno_tran, mut tran) in &mut ship {
+            dyno_tran.vel = evt.0;
+            tran.set_angle(evt.0.to_angle());
+        }
+    }
+    for _ in fire.read() {
+        println!("fire!");
     }
 }
 
@@ -100,6 +47,6 @@ impl Plugin for AnimationDefnsPlugin {
         app.add_systems(Startup, test_startup);
         app.add_systems(Update, test_update);
 
-        register_animation_manager::<AnimationLenny>(app);
+        register_animation_manager::<AnimationShip>(app);
     }
 }

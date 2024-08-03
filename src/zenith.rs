@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::WindowMode};
+use consts::FRAMERATE;
 
 pub mod animation;
 pub mod consts;
@@ -11,6 +12,7 @@ pub mod math;
 pub mod particles;
 pub mod physics;
 pub mod roots;
+pub mod ship;
 pub mod state;
 
 pub mod prelude {
@@ -25,6 +27,7 @@ pub mod prelude {
     pub use super::particles::*;
     pub use super::physics::*;
     pub use super::roots::*;
+    pub use super::ship::*;
     pub use super::state::*;
     pub use bevy::color::palettes::tailwind;
     pub use bevy::input::common_conditions::input_toggle_active;
@@ -39,11 +42,13 @@ pub mod prelude {
 /// Registers all of the systems that are common to all platforms and then
 /// runs the app.
 pub fn launch_app(mut app: App) {
+    app.insert_resource(Time::<Fixed>::from_hz(FRAMERATE as f64));
     app.add_plugins(layer::LayerPlugin::new(
         consts::IDEAL_VEC,
         consts::MENU_GROWTH,
     ));
     app.add_plugins(animation::AnimationPlugin);
+    app.add_plugins(input::CommonInputPlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);
     app.add_plugins(particles::ParticlesPlugin);
     app.add_plugins(physics::PhysicsPlugin);
@@ -57,19 +62,17 @@ pub fn launch_app(mut app: App) {
 fn main() {
     let mut app = App::new();
     app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resizable: false,
-                    mode: WindowMode::BorderlessFullscreen,
-                    // on iOS, gestures must be enabled.
-                    // This doesn't work on Android
-                    recognize_rotation_gesture: true,
-                    ..default()
-                }),
+        DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resizable: false,
+                mode: WindowMode::BorderlessFullscreen,
+                // on iOS, gestures must be enabled.
+                // This doesn't work on Android
+                recognize_rotation_gesture: true,
                 ..default()
-            })
-            .set(ImagePlugin::default_nearest()),
+            }),
+            ..default()
+        }), // .set(ImagePlugin::default_nearest()),
     );
     launch_app(app);
 }

@@ -129,11 +129,6 @@ pub fn uvec2_bound(points: &[Vec2]) -> UVec2 {
     }
 }
 
-/// God i write this so much
-pub fn spat_tran(x: f32, y: f32, z: f32) -> SpatialBundle {
-    SpatialBundle::from_transform(Transform::from_translation(Vec3::new(x, y, z)))
-}
-
 pub fn regular_polygon(num_sides: u32, mut angle: f32, radius: f32) -> Vec<Vec2> {
     let mut points: Vec<Vec2> = vec![];
     for _ in 0..num_sides {

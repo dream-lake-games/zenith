@@ -346,9 +346,15 @@ fn setup_layer_cameras(
 #[derive(Component)]
 struct ResizeQuad;
 
+/// After resizing to fill the screen (as best we can), how many mults over
+/// ideal did we end up doing?
+#[derive(Resource, Debug, Reflect)]
+pub struct IdealMult(pub f32);
+
 fn resize_canvases(
     mut events: EventReader<WindowResized>,
     mut quad_trans: Query<&mut Transform, With<ResizeQuad>>,
+    mut ideal_mult: ResMut<IdealMult>,
 ) {
     let Some(event) = events.read().last() else {
         return;
@@ -359,6 +365,7 @@ fn resize_canvases(
     let width_mult = event.width / IDEAL_WIDTH_f32;
     let height_mult = event.height / IDEAL_HEIGHT_f32;
     let mult = width_mult.min(height_mult);
+    ideal_mult.0 = mult;
 
     // Then update the layering quads
     for mut tran in &mut quad_trans {
@@ -396,6 +403,7 @@ impl Plugin for LayerPlugin {
         };
         app.insert_resource(cam_targets);
         app.add_plugins(Material2dPlugin::<BlendTexturesMaterial>::default());
+        app.insert_resource(IdealMult(1.0));
 
         app.add_systems(
             Startup,

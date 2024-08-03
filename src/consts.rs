@@ -35,8 +35,11 @@ pub const ZIX_DEBUG: f32 = 350.0;
 pub const ZIX_MENU: f32 = 300.0;
 pub const ZIX_PARTICLES: f32 = -300.0;
 pub const ZIX_PAUSE: f32 = 200.0;
+pub const ZIX_SHIP: f32 = 400.0;
 pub const ZIX_TRANSITION: f32 = 500.0;
 pub const ZIX_MIN: f32 = -600.0; // Anything further back than this gets culled by the camera(s)
 pub const ZIX_MAX: f32 = 600.0; // Anything further forward than this gets culled by the camera(s)
 
 pub const DEFAULT_ANIMATION_FPS: f32 = 24.0;
+
+pub const FRAMERATE: f32 = 36.0;
