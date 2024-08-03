@@ -69,7 +69,8 @@ impl Plugin for LifecyclePlugin {
             FixedPostUpdate,
             (update_final_states, update_transition_states)
                 .chain()
-                .after(AnimationSet),
+                .after(AnimationSet)
+                .after(ParticlesSet),
         );
     }
 }

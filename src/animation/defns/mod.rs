@@ -61,6 +61,14 @@ fn test_startup(mut commands: Commands) {
         Name::new("test_entity"),
         SpatialBundle::default(),
         AnimationManagerBundle::<AnimationLenny>::new(),
+        StaticTx::from_kind_n_shape(StaticTxKind::Normal, Shape::Circle { radius: 10.0 }),
+        TriggerRx::from_kind_n_shape(TriggerKind::Ship, Shape::Circle { radius: 20.0 }),
+    ));
+
+    commands.spawn((
+        Name::new("static_rx_entity"),
+        spat_tran!(100.0, 100.0),
+        StaticRx::from_kind_n_shape(StaticRxKind::Normal, Shape::Circle { radius: 30.0 }),
     ));
 }
 

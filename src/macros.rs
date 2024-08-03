@@ -36,6 +36,24 @@ macro_rules! scale_tran {
 }
 pub use scale_tran;
 
+/// Creates a spatial bundle from a translation
+#[macro_export]
+macro_rules! spat_tran {
+    // Only x and y provided, z assumed to be zero
+    ($x:expr, $y:expr) => {{
+        SpatialBundle::from_transform(Transform::from_translation(Vec3::new($x, $y, 0.0)))
+    }};
+    // All provided
+    ($x:expr, $y:expr, $z:expr) => {{
+        SpatialBundle::from_transform(Transform::from_translation(Vec3::new($x, $y, $z)))
+    }};
+    // Vec3 provided
+    ($v:expr) => {{
+        SpatialBundle::from_transform(Transform::from_translation($v))
+    }};
+}
+pub use spat_tran;
+
 /// Implements `get` for a field
 #[macro_export]
 macro_rules! impl_get {

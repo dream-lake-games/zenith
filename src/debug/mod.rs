@@ -3,11 +3,17 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::prelude::*;
 
+mod dphysics;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Reflect)]
-struct DebugState {}
+pub struct DebugState {
+    show_physics_bounds: bool,
+}
 impl Default for DebugState {
     fn default() -> Self {
-        Self {}
+        Self {
+            show_physics_bounds: true,
+        }
     }
 }
 
@@ -25,7 +31,7 @@ fn update_debug_state(
 
 fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
     let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
-    config.line_width = 4.0;
+    config.line_width = 1.0;
     config.render_layers = SpriteLayer::render_layers();
 }
 
@@ -46,5 +52,8 @@ impl Plugin for DebugPlugin {
                 .run_if(input_toggle_active(false, KeyCode::Tab)),
         );
         app.add_systems(Update, update_debug_state.run_if(in_state(AppMode::Dev)));
+
+        // Physics
+        dphysics::register_dphysics(app);
     }
 }

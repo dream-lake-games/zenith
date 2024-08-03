@@ -1,7 +1,12 @@
-//! NOTE: PROBABLYU NOT SUPER USEFUL
-//! Just keeping for reference on how to handle touch input and app close / load
-
 use crate::prelude::*;
+
+/// The set that contains all physics related systems
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct InputSet;
+
+// NOTE ON BELOW: PROBABLYU NOT SUPER USEFUL
+// Just keeping for reference on how to handle touch input and app close / load
+
 use bevy::{
     color::palettes::css::*,
     input::{gestures::RotationGesture, touch::TouchPhase},
