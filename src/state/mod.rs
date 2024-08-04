@@ -114,7 +114,6 @@ pub enum PhysicsState {
     Inactive,
     Active,
 }
-
 impl ComputedStates for PhysicsState {
     type SourceStates = (MetaState, PauseState);
 
@@ -146,7 +145,6 @@ pub enum TransitionState {
     Waiting,
     Entering,
 }
-
 impl ComputedStates for TransitionState {
     type SourceStates = MetaTransitionState;
 
@@ -157,6 +155,29 @@ impl ComputedStates for TransitionState {
             MetaTransitionState::Leaving { .. } => Some(TransitionState::Leaving),
             MetaTransitionState::Waiting { .. } => Some(TransitionState::Waiting),
             MetaTransitionState::Entering { .. } => Some(TransitionState::Entering),
+        }
+    }
+}
+
+/// Useful for just knowing if we are in one of the meta states
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Reflect)]
+pub enum MetaStateKind {
+    Menu,
+    Cutscene,
+    Tutorial,
+    Room,
+    Transition,
+}
+impl ComputedStates for MetaStateKind {
+    type SourceStates = MetaState;
+
+    fn compute(sources: Self::SourceStates) -> Option<Self> {
+        match sources {
+            MetaState::Menu(_) => Some(MetaStateKind::Menu),
+            MetaState::Cutscene(_) => Some(MetaStateKind::Cutscene),
+            MetaState::Tutorial(_) => Some(MetaStateKind::Tutorial),
+            MetaState::Room(_) => Some(MetaStateKind::Room),
+            MetaState::Transition => Some(MetaStateKind::Transition),
         }
     }
 }
@@ -175,6 +196,7 @@ impl Plugin for StatePlugin {
         // Computed states
         app.add_computed_state::<PhysicsState>();
         app.add_computed_state::<TransitionState>();
+        app.add_computed_state::<MetaStateKind>();
         // Overcrowded states
         room::register_room_states(app);
     }

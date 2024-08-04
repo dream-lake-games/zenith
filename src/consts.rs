@@ -28,6 +28,12 @@ pub const MENU_HEIGHT_f32: f32 = MENU_HEIGHT as f32;
 #[allow(nonstandard_style)]
 pub const MENU_VEC_f32: Vec2 = Vec2::new(MENU_WIDTH_f32, MENU_HEIGHT_f32);
 
+/// To avoid pixels that are too obviously seen, render to a quad this much bigger than ideal,
+/// and then zoom the camera out by this amount so it still is "ideal" size
+pub const DETAIL_GROWTH: u32 = 4;
+#[allow(nonstandard_style)]
+pub const DETAIL_GROWTH_f32: f32 = DETAIL_GROWTH as f32;
+
 // Helpful to have all the z-indices here for rendor order shenanigans
 // Remember, each of these zix only effect interactions within the same layer, between layers, order is determined
 pub const ZIX_BACKGROUND: f32 = -400.0;

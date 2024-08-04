@@ -517,6 +517,24 @@ fn move_stuck_static_receiver_dynos(
     }
 }
 
+fn apply_room_wrap(
+    mut ents: Query<(&mut Transform, &GlobalTransform), With<RoomWrap>>,
+    room_state: Res<State<RoomState>>,
+) {
+    let room_state = room_state.get();
+    for (mut tran, gtran) in &mut ents {
+        let half_room_size = room_state.room_size.as_vec2() / 2.0;
+        let wrapped_x = (gtran.translation().x + half_room_size.x)
+            .rem_euclid(half_room_size.x * 2.0)
+            - half_room_size.x;
+        let wrapped_y = (gtran.translation().y + half_room_size.y)
+            .rem_euclid(half_room_size.y * 2.0)
+            - half_room_size.y;
+        tran.translation.x += wrapped_x - gtran.translation().x;
+        tran.translation.y += wrapped_y - gtran.translation().y;
+    }
+}
+
 pub(super) fn register_logic(app: &mut App) {
     // Reset collisions during preupdate
     app.add_systems(
@@ -547,5 +565,13 @@ pub(super) fn register_logic(app: &mut App) {
             .in_set(PhysicsSet)
             .after(InputSet)
             .run_if(in_state(PhysicsState::Active)),
+    );
+    // Apply room wrap
+    app.add_systems(
+        FixedUpdate,
+        apply_room_wrap
+            .in_set(PhysicsSet)
+            .after(CollisionsSet)
+            .run_if(in_state(MetaStateKind::Room)),
     );
 }

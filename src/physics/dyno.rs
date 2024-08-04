@@ -11,3 +11,7 @@ pub struct DynoTran {
 pub struct DynoRot {
     pub rot: f32,
 }
+
+/// Anything that needs to behave like it moves infinitely, wrapping at room boundaries
+#[derive(Component, Debug, Clone, Reflect, Default)]
+pub struct RoomWrap;

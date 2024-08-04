@@ -3,15 +3,15 @@
 #[macro_export]
 macro_rules! tran_tran {
     // Only x and y provided, z assumed to be zero
-    ($x:expr, $y:expr) => {{
+    ($x:expr, $y:expr $(,)?) => {{
         Transform::from_translation(Vec3::new($x, $y, 0.0))
     }};
     // All provided
-    ($x:expr, $y:expr, $z:expr) => {{
+    ($x:expr, $y:expr, $z:expr $(,)?) => {{
         Transform::from_translation(Vec3::new($x, $y, $z))
     }};
     // Vec3 provided
-    ($v:expr) => {{
+    ($v:expr $(,)?) => {{
         Transform::from_translation($v)
     }};
 }

@@ -2,6 +2,7 @@ use bevy::{prelude::*, window::WindowMode};
 use consts::FRAMERATE;
 
 pub mod animation;
+pub mod camera;
 pub mod consts;
 pub mod debug;
 pub mod input;
@@ -17,6 +18,7 @@ pub mod state;
 
 pub mod prelude {
     pub use super::animation::*;
+    pub use super::camera::*;
     pub use super::consts::*;
     pub use super::debug::*;
     pub use super::input::*;
@@ -48,6 +50,7 @@ pub fn launch_app(mut app: App) {
         consts::MENU_GROWTH,
     ));
     app.add_plugins(animation::AnimationPlugin);
+    app.add_plugins(camera::CameraPlugin);
     app.add_plugins(input::CommonInputPlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);
     app.add_plugins(particles::ParticlesPlugin);

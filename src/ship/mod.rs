@@ -12,6 +12,8 @@ pub struct ShipBundle {
     static_rx: StaticRx,
     trigger_rx: TriggerRx,
     animation: AnimationManager<AnimationShip>,
+    camera_leader: DynamicCameraLeader,
+    wrap_room: RoomWrap,
 }
 impl ShipBundle {
     pub fn new(pos: Vec2) -> Self {
@@ -29,6 +31,8 @@ impl ShipBundle {
                 Shape::Circle { radius: 6.0 },
             ),
             animation: AnimationManager::new(),
+            camera_leader: DynamicCameraLeader,
+            wrap_room: RoomWrap,
         }
     }
 }

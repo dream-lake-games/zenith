@@ -100,6 +100,7 @@ impl Default for LayerColors {
 struct CameraTargets {
     ideal_size: UVec2,
     menu_growth: u32,
+    detail_growth: u32,
     bg_sprite_target: Handle<Image>,
     bg_light_target: Handle<Image>,
     sprite_target: Handle<Image>,
@@ -111,6 +112,7 @@ impl Default for CameraTargets {
         Self {
             ideal_size: IDEAL_VEC,
             menu_growth: MENU_GROWTH,
+            detail_growth: DETAIL_GROWTH,
             bg_sprite_target: default(),
             bg_light_target: default(),
             sprite_target: default(),
@@ -154,14 +156,26 @@ impl CameraTargets {
             }};
         }
 
-        self.bg_light_target =
-            make_layer_image!("target_bg_light", 84562364042238462870, self.ideal_size);
-        self.bg_sprite_target =
-            make_layer_image!("target_bg_sprite", 81297563682952991276, self.ideal_size);
-        self.light_target =
-            make_layer_image!("target_light", 84562364042238462871, self.ideal_size);
-        self.sprite_target =
-            make_layer_image!("target_sprite", 81297563682952991277, self.ideal_size);
+        self.bg_light_target = make_layer_image!(
+            "target_bg_light",
+            84562364042238462870,
+            self.ideal_size * self.detail_growth
+        );
+        self.bg_sprite_target = make_layer_image!(
+            "target_bg_sprite",
+            81297563682952991276,
+            self.ideal_size * self.detail_growth
+        );
+        self.light_target = make_layer_image!(
+            "target_light",
+            84562364042238462871,
+            self.ideal_size * self.detail_growth
+        );
+        self.sprite_target = make_layer_image!(
+            "target_sprite",
+            81297563682952991277,
+            self.ideal_size * self.detail_growth
+        );
         self.menu_target = make_layer_image!(
             "target_menu",
             51267563632952991278,
@@ -295,6 +309,7 @@ fn setup_layer_cameras(
                         projection: OrthographicProjection {
                             near: ZIX_MIN,
                             far: ZIX_MAX,
+                            scale: 1.0 / camera_targets.detail_growth as f32,
                             ..default()
                         },
                         ..Default::default()
