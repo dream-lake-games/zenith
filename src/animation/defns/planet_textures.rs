@@ -4,8 +4,8 @@ defn_texture!(
     TextureNormalPlanet,
     textures: [
         egg: {
-            path: "play/egg.png",
-            size: (24, 24),
+            path: "play/texture.png",
+            size: (36, 36),
         },
     ],
     parts: [

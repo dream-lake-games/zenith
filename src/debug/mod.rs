@@ -41,17 +41,31 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
     commands.spawn(ShipBundle::new(default()));
 
     commands.spawn(PlanetBundle::new(
-        "test1",
+        "wrap1",
         StaticTxKind::Normal,
         Vec2::new(room_size.x as f32 / 2.0, 10.0),
         Shape::Circle { radius: 15.0 },
     ));
     commands.spawn(PlanetBundle::new(
-        "test1",
+        "wrap2",
         StaticTxKind::Normal,
         Vec2::new(-room_size.x as f32 / 2.0, 10.0),
         Shape::Circle { radius: 15.0 },
     ));
+    commands
+        .spawn(PlanetBundle::new(
+            "sticky",
+            StaticTxKind::Sticky,
+            Vec2::new(100.0, 10.0),
+            // Shape::Circle { radius: 15.0 },
+            Shape::Polygon {
+                points: simple_rect(200.0, 200.0),
+            },
+        ))
+        .insert(DynoTran {
+            vel: Vec2::ONE * 2.0,
+        })
+        .insert(DynoRot { rot: 2.0 });
 
     for xmul in [-1, 0, 1] {
         for ymul in [-1, 0, 1] {
@@ -84,10 +98,11 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
 
 fn debug_update(
     keyboard: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
     mut bullet_time: ResMut<BulletTime>,
     mut launch: EventReader<Launch>,
     mut fire: EventReader<Fire>,
-    mut ship: Query<(&mut DynoTran, &mut Transform), With<Ship>>,
+    mut ship: Query<(Entity, &mut DynoTran, &mut Transform), With<Ship>>,
 ) {
     if keyboard.just_pressed(KeyCode::BracketLeft) {
         bullet_time.set_normal();
@@ -97,7 +112,8 @@ fn debug_update(
     }
     for evt in launch.read() {
         println!("launch!");
-        for (mut dyno_tran, mut tran) in &mut ship {
+        for (eid, mut dyno_tran, mut tran) in &mut ship {
+            commands.entity(eid).remove::<Stuck>();
             dyno_tran.vel = evt.0;
             tran.set_angle(evt.0.to_angle());
         }

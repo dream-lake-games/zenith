@@ -44,8 +44,8 @@ pub enum TextureDimGrowth {
 
 #[derive(Debug, Clone, Reflect, Default)]
 pub struct TextureGrowth {
-    x: TextureDimGrowth,
-    y: TextureDimGrowth,
+    pub x: TextureDimGrowth,
+    pub y: TextureDimGrowth,
 }
 
 #[derive(Debug, Clone, Reflect)]
