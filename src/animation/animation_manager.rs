@@ -5,7 +5,7 @@ use crate::prelude::*;
 use super::mat::AnimationMaterial;
 
 #[derive(Debug, Clone, Reflect)]
-pub struct BodyData {
+pub struct AnimationBodyData {
     pub(super) path: String,
     pub(super) size: UVec2,
     pub(super) length: u32,
@@ -15,8 +15,8 @@ pub struct BodyData {
     pub(super) scale: Vec2,
     pub(super) render_layers: RenderLayers,
 }
-impl BodyData {
-    fn with_overrides(mut self, overrides: BodyDataOverrides) -> Self {
+impl AnimationBodyData {
+    fn with_overrides(mut self, overrides: AnimationBodyDataOverrides) -> Self {
         self.offset = overrides.override_offset.unwrap_or(self.offset);
         self.scale = overrides.override_scale.unwrap_or(self.scale);
         self.color = overrides.override_color.unwrap_or(self.color);
@@ -25,14 +25,14 @@ impl BodyData {
 }
 
 #[derive(Default, Debug, Clone, Reflect)]
-pub(super) struct BodyDataOverrides {
+pub(super) struct AnimationBodyDataOverrides {
     pub(super) override_offset: Option<Vec3>,
     pub(super) override_scale: Option<Vec2>,
     pub(super) override_color: Option<Color>,
 }
 
 pub trait AnimationBody {
-    fn to_body_data(&self) -> BodyData;
+    fn to_body_data(&self) -> AnimationBodyData;
 }
 
 #[derive(Debug, Clone, Reflect, PartialEq)]
@@ -43,8 +43,8 @@ pub(super) enum AnimationNextState<NextType> {
 }
 
 #[derive(Debug, Clone, Reflect)]
-pub struct StateData<NextType, BodyType: AnimationBody> {
-    pub(super) overwritten_bodies: Vec<(BodyType, BodyDataOverrides)>,
+pub struct AnimationStateData<NextType, BodyType: AnimationBody> {
+    pub(super) overwritten_bodies: Vec<(BodyType, AnimationBodyDataOverrides)>,
     pub(super) next: AnimationNextState<NextType>,
 }
 
@@ -63,9 +63,9 @@ pub trait AnimationStateMachine:
     + TypePath
     + GetTypeRegistration
 {
-    type FileType: AnimationBody;
+    type BodyType: AnimationBody;
 
-    fn to_state_data(&self) -> StateData<Self, Self::FileType>;
+    fn to_state_data(&self) -> AnimationStateData<Self, Self::BodyType>;
 }
 
 #[derive(Debug, Clone, Component, Reflect)]
@@ -155,7 +155,7 @@ struct AnimationNextBurden<StateMachine: AnimationStateMachine> {
 }
 
 #[derive(Bundle)]
-struct BodyDataBundle<StateMachine: AnimationStateMachine> {
+struct AnimationBodyDataBundle<StateMachine: AnimationStateMachine> {
     name: Name,
     mesh: Mesh2dHandle,
     material: Handle<AnimationMaterial>,
@@ -163,9 +163,9 @@ struct BodyDataBundle<StateMachine: AnimationStateMachine> {
     render_layers: RenderLayers,
     index: AnimationIndex<StateMachine>,
 }
-impl<StateMachine: AnimationStateMachine> BodyDataBundle<StateMachine> {
+impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> {
     fn new(
-        data: BodyData,
+        data: AnimationBodyData,
         next: AnimationNextState<StateMachine>,
         ass: &Res<AssetServer>,
         meshes: &mut ResMut<Assets<Mesh>>,
@@ -181,7 +181,7 @@ impl<StateMachine: AnimationStateMachine> BodyDataBundle<StateMachine> {
                 false,
                 false,
                 Vec2::ONE,
-                Color::WHITE,
+                data.color,
             )),
             spatial: SpatialBundle::from_transform(Transform {
                 translation: data.offset,
@@ -211,7 +211,6 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
     mut mats: ResMut<Assets<AnimationMaterial>>,
 ) {
     for (eid, manager) in &managers {
-        println!("got changed event");
         commands.entity(eid).despawn_descendants();
         let state_data = manager.get_state().to_state_data();
         for (ix, (body, overwrite)) in state_data.overwritten_bodies.into_iter().enumerate() {
@@ -221,7 +220,7 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
             } else {
                 AnimationNextState::None
             };
-            let body_bund = BodyDataBundle::new(data, next, &ass, &mut meshes, &mut mats);
+            let body_bund = AnimationBodyDataBundle::new(data, next, &ass, &mut meshes, &mut mats);
             commands.spawn(body_bund).set_parent(eid);
         }
     }
@@ -239,6 +238,10 @@ fn play_animations<StateMachine: AnimationStateMachine>(
     bullet_time: Res<BulletTime>,
 ) {
     for (mut index, hand, parent) in &mut bodies {
+        let (manager_eid, mut manager, already_dying) = managers.get_mut(parent.get()).unwrap();
+        if manager.hidden {
+            continue;
+        }
         index.time += bullet_time.delta_seconds();
         if index.time < index.spf {
             // No update is happening to this body, can just continue
@@ -264,14 +267,13 @@ fn play_animations<StateMachine: AnimationStateMachine>(
                 }
                 AnimationNextState::Some(variant) => {
                     // Transitioning to a new state
-                    let (_eid, mut manager, _) = managers.get_mut(parent.get()).unwrap();
                     manager.reset_state(variant);
                 }
                 AnimationNextState::HideThenDie(dying_time) => {
                     // Triggering the death process for this entity
-                    let (eid, _, already_dying) = managers.get(parent.get()).unwrap();
+                    manager.set_hidden(true);
                     if !already_dying.is_some() {
-                        commands.entity(eid).insert(Dying::new(dying_time));
+                        commands.entity(manager_eid).insert(Dying::new(dying_time));
                     }
                 }
             }

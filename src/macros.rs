@@ -68,6 +68,20 @@ macro_rules! impl_get {
 }
 pub use impl_get;
 
+/// Implements `get` for a field that returns a reference
+#[macro_export]
+macro_rules! impl_get_ref {
+    ($field:ident, $type:ty) => {
+        paste::paste! {
+            #[allow(unused)]
+            pub fn [<get_ $field>](&self) -> &$type {
+                &self.$field
+            }
+        }
+    };
+}
+pub use impl_get_ref;
+
 /// Implements `set` for a field
 #[macro_export]
 macro_rules! impl_set {

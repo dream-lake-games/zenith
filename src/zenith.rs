@@ -5,6 +5,7 @@ pub mod animation;
 pub mod camera;
 pub mod consts;
 pub mod debug;
+pub mod environment;
 pub mod input;
 pub mod layer;
 pub mod lifecycle;
@@ -21,6 +22,7 @@ pub mod prelude {
     pub use super::camera::*;
     pub use super::consts::*;
     pub use super::debug::*;
+    pub use super::environment::*;
     pub use super::input::*;
     pub use super::layer::*;
     pub use super::lifecycle::*;
@@ -35,8 +37,9 @@ pub mod prelude {
     pub use bevy::input::common_conditions::input_toggle_active;
     pub use bevy::prelude::*;
     pub use bevy::render::view::*;
-    pub use bevy::utils::HashSet;
+    pub use bevy::utils::{HashMap, HashSet};
     pub use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+    pub use rand::Rng;
     pub use std::collections::VecDeque;
     pub use std::time::Duration;
 }
@@ -51,6 +54,7 @@ pub fn launch_app(mut app: App) {
     ));
     app.add_plugins(animation::AnimationPlugin);
     app.add_plugins(camera::CameraPlugin);
+    app.add_plugins(environment::EnvironmentPlugin);
     app.add_plugins(input::CommonInputPlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);
     app.add_plugins(particles::ParticlesPlugin);

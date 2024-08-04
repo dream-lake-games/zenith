@@ -1,5 +1,7 @@
 use std::f32::consts::PI;
 
+use rand::thread_rng;
+
 use crate::prelude::*;
 
 /// Given a point and a line segment, get the point on the line segment
@@ -262,4 +264,10 @@ pub fn shortest_rotation(angle1: f32, angle2: f32) -> f32 {
     }
 
     difference
+}
+
+/// Nudges a z-index by a random amount so if two of it overlap it won't shutter
+/// Just a random number in [0, 1) reskin
+pub fn zix_nudge() -> f32 {
+    thread_rng().gen::<f32>()
 }

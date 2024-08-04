@@ -31,13 +31,27 @@ fn update_debug_state(
 
 fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
     let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
-    config.line_width = 1.0;
+    config.line_width = 2.0;
     config.render_layers = SpriteLayer::render_layers();
 }
 
 fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
-    commands.spawn(ShipBundle::new(default()));
     let room_size = (IDEAL_VEC * 2).as_ivec2();
+
+    commands.spawn(ShipBundle::new(default()));
+
+    commands.spawn(PlanetBundle::new(
+        "test1",
+        StaticTxKind::Normal,
+        Vec2::new(room_size.x as f32 / 2.0, 10.0),
+        Shape::Circle { radius: 15.0 },
+    ));
+    commands.spawn(PlanetBundle::new(
+        "test1",
+        StaticTxKind::Normal,
+        Vec2::new(-room_size.x as f32 / 2.0, 10.0),
+        Shape::Circle { radius: 15.0 },
+    ));
 
     for xmul in [-1, 0, 1] {
         for ymul in [-1, 0, 1] {
