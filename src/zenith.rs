@@ -11,6 +11,7 @@ pub mod layer;
 pub mod lifecycle;
 pub mod macros;
 pub mod math;
+pub mod mirage;
 pub mod particles;
 pub mod physics;
 pub mod roots;
@@ -28,6 +29,7 @@ pub mod prelude {
     pub use super::lifecycle::*;
     pub use super::macros::*;
     pub use super::math::*;
+    pub use super::mirage::*;
     pub use super::particles::*;
     pub use super::physics::*;
     pub use super::roots::*;
@@ -57,6 +59,7 @@ pub fn launch_app(mut app: App) {
     app.add_plugins(environment::EnvironmentPlugin);
     app.add_plugins(input::CommonInputPlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);
+    app.add_plugins(mirage::MiragePlugin);
     app.add_plugins(particles::ParticlesPlugin);
     app.add_plugins(physics::PhysicsPlugin);
     app.add_plugins(roots::RootPlugin);

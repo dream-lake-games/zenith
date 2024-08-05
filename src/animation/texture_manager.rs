@@ -70,6 +70,7 @@ pub trait TexturePart:
     + Send
     + Sync
     + 'static
+    + std::fmt::Debug
     + std::hash::Hash
     + PartialEq
     + Eq
@@ -211,7 +212,7 @@ impl<StateMachine: TextureStateMachine> TextureBodyDataBundle<StateMachine> {
                 repetitions,
                 data.color,
             )),
-            spatial: default(),
+            spatial: spat_tran!(0.0, 0.0, data.z_offset),
             render_layers: data.render_layers,
             index: TextureIndex {
                 ix: 0,

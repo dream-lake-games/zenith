@@ -43,34 +43,14 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
     commands.spawn(PlanetBundle::new(
         "wrap1",
         StaticTxKind::Normal,
-        Vec2::new(room_size.x as f32 / 2.0, 10.0),
+        Vec2::new(0.0, room_size.y as f32 / 2.0),
         Shape::Circle { radius: 15.0 },
     ));
-    commands.spawn(PlanetBundle::new(
-        "wrap2",
-        StaticTxKind::Normal,
-        Vec2::new(-room_size.x as f32 / 2.0, 10.0),
-        Shape::Circle { radius: 15.0 },
-    ));
-    commands
-        .spawn(PlanetBundle::new(
-            "sticky",
-            StaticTxKind::Sticky,
-            Vec2::new(100.0, 10.0),
-            // Shape::Circle { radius: 15.0 },
-            Shape::Polygon {
-                points: simple_rect(200.0, 200.0),
-            },
-        ))
-        .insert(DynoTran {
-            vel: Vec2::ONE * 2.0,
-        })
-        .insert(DynoRot { rot: 2.0 });
 
     for xmul in [-1, 0, 1] {
         for ymul in [-1, 0, 1] {
             commands.spawn((
-                Name::new("test-grid({xmul},{ymul})"),
+                Name::new(format!("test-grid({xmul},{ymul})")),
                 SpriteBundle {
                     sprite: Sprite {
                         custom_size: Some(Vec2::new(640.0, 360.0)),
@@ -88,12 +68,6 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
             ));
         }
     }
-
-    // commands.spawn((
-    //     Name::new("static_rx_entity"),
-    //     spat_tran!(100.0, 100.0),
-    //     StaticRx::from_kind_n_shape(StaticRxKind::Normal, Shape::Circle { radius: 30.0 }),
-    // ));
 }
 
 fn debug_update(
@@ -103,12 +77,22 @@ fn debug_update(
     mut launch: EventReader<Launch>,
     mut fire: EventReader<Fire>,
     mut ship: Query<(Entity, &mut DynoTran, &mut Transform), With<Ship>>,
+    mut planet_textures: Query<&mut TextureManager<TextureTestPlanetState>>,
 ) {
     if keyboard.just_pressed(KeyCode::BracketLeft) {
         bullet_time.set_normal();
     }
     if keyboard.just_pressed(KeyCode::BracketRight) {
         bullet_time.set_slow();
+    }
+    if keyboard.just_pressed(KeyCode::Space) {
+        for mut planet_texture in &mut planet_textures {
+            let next_color = match planet_texture.get_state() {
+                TextureTestPlanetState::BlueInner => TextureTestPlanetState::RedInner,
+                TextureTestPlanetState::RedInner => TextureTestPlanetState::BlueInner,
+            };
+            planet_texture.set_state(next_color);
+        }
     }
     for evt in launch.read() {
         println!("launch!");

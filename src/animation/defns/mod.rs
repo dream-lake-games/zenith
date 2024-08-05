@@ -14,5 +14,6 @@ impl Plugin for AnimationDefnsPlugin {
         register_animation_manager::<AnimationShip>(app);
 
         register_texture_manager::<TextureNormalPlanetState>(app);
+        register_texture_manager::<TextureTestPlanetState>(app);
     }
 }
