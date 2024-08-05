@@ -82,6 +82,21 @@ impl RoomState {
             },
         }
     }
+
+    /// Gets the offsets to show/update mirages to be exactly one room away in 8 dirs
+    pub fn mirage_offsets(&self) -> Vec<Vec2> {
+        let mut offsets = vec![];
+        let room_size = self.room_size.as_vec2();
+        for xmul in [-1.0, 0.0, 1.0] {
+            for ymul in [-1.0, 0.0, 1.0] {
+                if xmul == 0.0 && ymul == 0.0 {
+                    continue;
+                }
+                offsets.push(Vec2::new(room_size.x * xmul, room_size.y * ymul));
+            }
+        }
+        offsets
+    }
 }
 
 impl ComputedStates for EncounterKind {

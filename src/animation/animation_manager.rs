@@ -2,7 +2,7 @@ use bevy::{reflect::GetTypeRegistration, sprite::Mesh2dHandle};
 
 use crate::prelude::*;
 
-use super::mat::AnimationMaterial;
+use super::{mat::AnimationMaterial, ManagersSet};
 
 #[derive(Debug, Clone, Reflect)]
 pub struct AnimationBodyData {
@@ -283,9 +283,23 @@ fn play_animations<StateMachine: AnimationStateMachine>(
 
 pub(super) fn register_animation_manager<StateMachine: AnimationStateMachine>(app: &mut App) {
     app.register_type::<AnimationManager<StateMachine>>();
-    app.add_systems(FixedPostUpdate, handle_manager_changes::<StateMachine>);
+    app.add_systems(
+        FixedPostUpdate,
+        handle_manager_changes::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(ManagersSet),
+    );
     app.add_systems(
         FixedUpdate,
-        play_animations::<StateMachine>.in_set(AnimationSet),
+        play_animations::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(ManagersSet),
+    );
+    app.add_systems(
+        FixedPostUpdate,
+        spawn_animation_manager_mirages::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(MirageSet)
+            .after(ManagersSet),
     );
 }

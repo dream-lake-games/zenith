@@ -33,7 +33,7 @@ use crate::prelude::*;
 ///
 ///
 ///
-use super::{mat::AnimationMaterial, mesh::points_to_mesh};
+use super::{mat::AnimationMaterial, mesh::points_to_mesh, ManagersSet};
 
 #[derive(Debug, Clone, Copy, Reflect, PartialEq, Eq, Default)]
 pub enum TextureDimGrowth {
@@ -280,9 +280,23 @@ fn play_animations<StateMachine: TextureStateMachine>(
 
 pub(super) fn register_texture_manager<StateMachine: TextureStateMachine>(app: &mut App) {
     app.register_type::<TextureManager<StateMachine>>();
-    app.add_systems(FixedPostUpdate, handle_manager_changes::<StateMachine>);
+    app.add_systems(
+        FixedPostUpdate,
+        handle_manager_changes::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(ManagersSet),
+    );
     app.add_systems(
         FixedUpdate,
-        play_animations::<StateMachine>.in_set(AnimationSet),
+        play_animations::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(ManagersSet),
+    );
+    app.add_systems(
+        FixedPostUpdate,
+        spawn_texture_manager_mirages::<StateMachine>
+            .in_set(AnimationSet)
+            .in_set(MirageSet)
+            .after(ManagersSet),
     );
 }

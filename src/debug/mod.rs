@@ -36,37 +36,37 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
 }
 
 fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
-    let room_size = (IDEAL_VEC * 2).as_ivec2();
+    let room_state = RoomState::xth_encounter(EncounterKind::SimpOnly, 1);
 
     commands.spawn(ShipBundle::new(default()));
 
     commands.spawn(PlanetBundle::new(
         "wrap1",
         StaticTxKind::Normal,
-        Vec2::new(0.0, room_size.y as f32 / 2.0),
+        Vec2::new(0.0, room_state.room_size.y as f32 / 2.0),
         Shape::Circle { radius: 15.0 },
+        &room_state,
     ));
 
-    for xmul in [-1, 0, 1] {
-        for ymul in [-1, 0, 1] {
-            commands.spawn((
-                Name::new(format!("test-grid({xmul},{ymul})")),
-                SpriteBundle {
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::new(640.0, 360.0)),
-                        ..default()
-                    },
-                    texture: ass.load("play/test-grid.png"),
-                    transform: tran_tran!(
-                        (room_size.x * xmul) as f32,
-                        (room_size.y * ymul) as f32,
-                        0.0,
-                    ),
+    for (ix, offset) in room_state
+        .mirage_offsets()
+        .into_iter()
+        .chain([Vec2::ZERO].into_iter())
+        .enumerate()
+    {
+        commands.spawn((
+            Name::new(format!("test-grid({ix})")),
+            SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(640.0, 360.0)),
                     ..default()
                 },
-                BgSpriteLayer::render_layers(),
-            ));
-        }
+                texture: ass.load("play/test-grid.png"),
+                transform: tran_tran!(offset.extend(0.0)),
+                ..default()
+            },
+            BgSpriteLayer::render_layers(),
+        ));
     }
 }
 

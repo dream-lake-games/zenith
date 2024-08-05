@@ -3,7 +3,7 @@ use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 use bevy::sprite::Material2d;
 
 #[derive(AsBindGroup, Debug, Clone, Asset, Reflect, PartialEq)]
-pub(super) struct AnimationMaterial {
+pub struct AnimationMaterial {
     #[texture(1)]
     #[sampler(2)]
     texture: Handle<Image>,
