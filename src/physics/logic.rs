@@ -291,7 +291,7 @@ fn resolve_trigger_collisions(
         let my_tran_n_angle = gtran.tran_n_angle();
         let (_, other_gtran) = shared_data.get(other_eid).unwrap();
         let rhs_tran_n_angle = other_gtran.tran_n_angle();
-        let Some((_, cp)) = rx.bounds.bounce_off(
+        let Some((_, cp)) = rx.bounds.do_overlap(
             my_tran_n_angle,
             (&other_tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
         ) else {

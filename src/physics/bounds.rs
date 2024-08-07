@@ -82,6 +82,38 @@ impl Shape {
             }
         }
     }
+
+    /// Given my placement and another shape/placement combo, figure out if these things overlap.
+    /// Returns None if they do not overlap. Otherwise, returns two things:
+    /// 1. A diff which represents how much to move my placement by to get out of the shape
+    /// 2. The exact collision point
+    pub fn do_overlap(
+        &self,
+        placement: (Vec2, f32),
+        rhs: (&Self, Vec2, f32),
+    ) -> Option<(Vec2, Vec2)> {
+        let (my_pos, _my_rot) = placement;
+        let (rhs_bounds, rhs_pos, rhs_rot) = rhs;
+        match self {
+            Self::Circle {
+                center,
+                radius: my_radius,
+            } => {
+                let my_pos = my_pos + *center;
+                let (signed_dist, cp) = rhs_bounds.closest_point((rhs_pos, rhs_rot), my_pos);
+                // NOTE: This causes bugs. There's some weird stuff happening here with like edges extending down.
+                // write a better triangle overlapper at some point PLEASE
+                if signed_dist > *my_radius {
+                    return None;
+                }
+                let dir = (my_pos - cp).normalize_or_zero();
+                Some((dir * (*my_radius - signed_dist), cp))
+            }
+            Self::Polygon { points: _my_points } => {
+                unimplemented!("Determining the push point for polygons is not yet supported");
+            }
+        }
+    }
 }
 impl Shape {
     pub fn to_points(&self) -> Vec<Vec2> {
@@ -158,6 +190,24 @@ impl Bounds {
             for other_shape in other_bounds.get_shapes() {
                 let bounce =
                     my_shape.bounce_off(my_tran_n_angle, (other_shape, other_tran, other_angle));
+                if bounce.is_some() {
+                    return bounce;
+                }
+            }
+        }
+        None
+    }
+
+    pub fn do_overlap(
+        &self,
+        my_tran_n_angle: (Vec2, f32),
+        other_thing: (&Self, Vec2, f32),
+    ) -> Option<(Vec2, Vec2)> {
+        let (other_bounds, other_tran, other_angle) = other_thing;
+        for my_shape in &self.shapes {
+            for other_shape in other_bounds.get_shapes() {
+                let bounce =
+                    my_shape.do_overlap(my_tran_n_angle, (other_shape, other_tran, other_angle));
                 if bounce.is_some() {
                     return bounce;
                 }

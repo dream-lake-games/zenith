@@ -51,6 +51,20 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
         &room_state,
     ));
 
+    let freestyle_shape = Shape::Circle {
+        center: default(),
+        radius: 10.0,
+    };
+    let mut freestyle_shapes = vec![freestyle_shape.clone()];
+    for offset in room_state.mirage_offsets() {
+        freestyle_shapes.push(freestyle_shape.clone().with_offset(offset));
+    }
+    commands.spawn((
+        Name::new("freestyle_trigger_tx"),
+        TriggerTx::from_kind_n_shapes(TriggerKind::Ship, freestyle_shapes),
+        spat_tran!(-80.0, room_state.room_size.y as f32 / 2.0),
+    ));
+
     for (ix, offset) in room_state
         .mirage_offsets()
         .into_iter()
