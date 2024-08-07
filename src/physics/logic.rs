@@ -10,6 +10,7 @@ const MAX_TRAN_STEP_LENGTH: f32 = 2.0;
 fn reset_collision_records(
     mut statics_provider_q: Query<&mut StaticTx>,
     mut statics_receiver_q: Query<&mut StaticRx>,
+    mut triggers_provider_q: Query<&mut TriggerTx>,
     mut triggers_receiver_q: Query<&mut TriggerRx>,
     collision_root: Res<CollisionRoot>,
     mut commands: Commands,
@@ -20,6 +21,9 @@ fn reset_collision_records(
     for mut receiver in statics_receiver_q.iter_mut() {
         receiver.collisions = VecDeque::new();
     }
+    for mut provider in triggers_provider_q.iter_mut() {
+        provider.collisions = VecDeque::new();
+    }
     for mut receiver in triggers_receiver_q.iter_mut() {
         receiver.collisions = VecDeque::new();
     }
@@ -29,11 +33,16 @@ fn reset_collision_records(
 /// Enforces current limitations in the physics system by panicking if I ever fuck up.
 fn enforce_invariants(
     provider_and_receiver: Query<Entity, (With<StaticTx>, With<StaticRx>)>,
-    trigger_on_static: Query<Entity, (With<TriggerRx>, With<StaticTx>)>,
+    trigger_on_static: Query<Entity, (Or<(With<TriggerTx>, With<TriggerRx>)>, With<StaticTx>)>,
     no_gtran: Query<
         Entity,
         (
-            Or<(With<StaticTx>, With<StaticRx>, With<TriggerRx>)>,
+            Or<(
+                With<StaticTx>,
+                With<StaticRx>,
+                With<TriggerTx>,
+                With<TriggerRx>,
+            )>,
             Without<GlobalTransform>,
         ),
     >,
@@ -67,6 +76,7 @@ fn initialize_physics(
                 With<DynoRot>,
                 With<StaticRx>,
                 With<StaticTx>,
+                With<TriggerTx>,
                 With<TriggerRx>,
             )>,
             Without<PhysicsInitialized>,
@@ -87,6 +97,7 @@ fn move_uninteresting_dynos(
             Without<DynoTran>,
             Without<StaticTx>,
             Without<StaticRx>,
+            Without<TriggerTx>,
             Without<TriggerRx>,
             With<PhysicsInitialized>,
         ),
@@ -96,6 +107,7 @@ fn move_uninteresting_dynos(
         (
             Without<StaticTx>,
             Without<StaticRx>,
+            Without<TriggerTx>,
             Without<TriggerRx>,
             With<PhysicsInitialized>,
         ),
@@ -106,6 +118,7 @@ fn move_uninteresting_dynos(
             Without<DynoRot>,
             Without<StaticTx>,
             Without<StaticRx>,
+            Without<TriggerTx>,
             Without<TriggerRx>,
             With<PhysicsInitialized>,
         ),
@@ -142,7 +155,7 @@ fn move_static_provider_dynos(
         (With<StaticTx>, With<PhysicsInitialized>),
     >,
     mut tran_only_dynos: Query<
-        (Option<&TriggerRx>, &DynoTran, &mut Transform),
+        (&DynoTran, &mut Transform),
         (
             Without<DynoRot>,
             With<StaticTx>,
@@ -164,10 +177,7 @@ fn move_static_provider_dynos(
         apply_rotation(dyno_rot, &mut tran);
         apply_translation(dyno_tran, &mut tran);
     }
-    for (triggers, dyno_tran, mut tran) in &mut tran_only_dynos {
-        if triggers.is_some() {
-            unimplemented!("Triggers on StaticKind (providers) is not yet supported");
-        }
+    for (dyno_tran, mut tran) in &mut tran_only_dynos {
         apply_translation(dyno_tran, &mut tran);
     }
 }
@@ -204,10 +214,10 @@ fn resolve_static_collisions(
             pos: cp,
             rx_perp: old_perp,
             rx_par: old_par,
-            provider_eid: tx_eid,
-            provider_kind: tx.kind,
-            receiver_eid: rx_eid,
-            receiver_kind: rx.kind,
+            tx_eid,
+            tx_kind: tx.kind,
+            rx_eid,
+            rx_kind: rx.kind,
         };
         let collision_eid = commands
             .spawn(StaticCollisionBundle::new(collision_record))
@@ -268,12 +278,12 @@ fn resolve_trigger_collisions(
     rx: &mut TriggerRx,
     gtran: &Transform,
     shared_data: &Query<(Entity, &GlobalTransform)>,
-    trigger_data: &mut Query<(Entity, &mut TriggerRx)>,
+    trigger_txs: &mut Query<(Entity, &mut TriggerTx)>,
     commands: &mut Commands,
     collision_root: &CollisionRoot,
     dup_set: &mut HashSet<(Entity, Entity)>,
 ) {
-    for (other_eid, mut other_rx) in trigger_data {
+    for (other_eid, mut other_tx) in trigger_txs {
         if other_eid == eid {
             // You can't collide with your own trigger, idiot
             continue;
@@ -283,7 +293,7 @@ fn resolve_trigger_collisions(
         let rhs_tran_n_angle = other_gtran.tran_n_angle();
         let Some((_, cp)) = rx.bounds.bounce_off(
             my_tran_n_angle,
-            (&other_rx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
+            (&other_tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
         ) else {
             // These things don't overlap, nothing to do
             continue;
@@ -292,26 +302,31 @@ fn resolve_trigger_collisions(
         if !dup_set.contains(&(eid, other_eid)) {
             let my_collision_record = TriggerCollisionRecord {
                 pos: cp,
-                other_eid,
-                other_kind: other_rx.kind.clone(),
+                my_role: TriggerCollisionRole::Rx,
+                rx_eid: eid,
+                rx_kind: rx.kind.clone(),
+                tx_eid: other_eid,
+                tx_kind: other_tx.kind.clone(),
             };
             let my_collision_eid = commands
                 .spawn(TriggerCollisionBundle::new(my_collision_record))
                 .set_parent(collision_root.eid())
                 .id();
             rx.collisions.push_back(my_collision_eid);
-        }
-        if !dup_set.contains(&(other_eid, eid)) {
             let other_collision_record = TriggerCollisionRecord {
                 pos: cp,
-                other_eid: eid,
-                other_kind: rx.kind.clone(),
+                my_role: TriggerCollisionRole::Tx,
+                rx_eid: eid,
+                rx_kind: rx.kind.clone(),
+                tx_eid: other_eid,
+                tx_kind: other_tx.kind.clone(),
             };
             let other_collision_eid = commands
                 .spawn(TriggerCollisionBundle::new(other_collision_record))
                 .set_parent(collision_root.eid())
                 .id();
-            other_rx.collisions.push_back(other_collision_eid);
+            other_tx.collisions.push_back(other_collision_eid);
+            dup_set.insert((eid, other_eid));
         }
     }
 }
@@ -340,8 +355,9 @@ fn move_unstuck_static_or_trigger_receivers(
         Or<(With<DynoTran>, With<DynoRot>)>,
     >,
     mut static_data: Query<(Entity, &mut StaticRx), Without<Stuck>>,
-    mut trigger_data: Query<(Entity, &mut TriggerRx)>,
-    mut static_providers: Query<(Entity, &mut StaticTx, &GlobalTransform)>,
+    mut trigger_txs: Query<(Entity, &mut TriggerTx)>,
+    mut trigger_rxs: Query<(Entity, &mut TriggerRx)>,
+    mut static_txs: Query<(Entity, &mut StaticTx, &GlobalTransform)>,
     mut commands: Commands,
     collision_root: Res<CollisionRoot>,
     proot: Res<ParticlesRoot>,
@@ -362,7 +378,7 @@ fn move_unstuck_static_or_trigger_receivers(
         let mut my_static = static_data.get(eid).ok().map(|inner| inner.1.clone());
 
         // Mutable trigger data (need to mutate and then assign at end)
-        let mut my_trigger = trigger_data.get(eid).ok().map(|inner| inner.1.clone());
+        let mut my_trigger_rx = trigger_rxs.get(eid).ok().map(|inner| inner.1.clone());
         let mut dup_set = HashSet::<(Entity, Entity)>::new();
 
         // If we have rotational movement, rotate first
@@ -390,7 +406,7 @@ fn move_unstuck_static_or_trigger_receivers(
                         &mut my_dyno_tran,
                         &mut my_tran,
                         my_gtran_offset,
-                        &mut static_providers,
+                        &mut static_txs,
                         &mut commands,
                         &collision_root,
                     );
@@ -398,13 +414,13 @@ fn move_unstuck_static_or_trigger_receivers(
                 // Basically because GlobalTransform doesn't update mid-system we need to do this shenanigans
                 let mut mid_step_gtran = my_tran.clone();
                 mid_step_gtran.translation += my_gtran_offset.extend(0.0);
-                if let Some(my_trigger_rx) = my_trigger.as_mut() {
+                if let Some(my_trigger_rx) = my_trigger_rx.as_mut() {
                     resolve_trigger_collisions(
                         eid,
                         my_trigger_rx,
                         &mid_step_gtran,
                         &shared_data,
-                        &mut trigger_data,
+                        &mut trigger_txs,
                         &mut commands,
                         &collision_root,
                         &mut dup_set,
@@ -425,7 +441,7 @@ fn move_unstuck_static_or_trigger_receivers(
             }
         } else {
             // We're not translating, resolve triggers once to be sure;
-            if let Some(my_trigger_rx) = my_trigger.as_mut() {
+            if let Some(my_trigger_rx) = my_trigger_rx.as_mut() {
                 // Basically because GlobalTransform doesn't update mid-system we need to do this shenanigans
                 let mut mid_step_gtran = my_tran.clone();
                 mid_step_gtran.translation += my_gtran_offset.extend(0.0);
@@ -434,7 +450,7 @@ fn move_unstuck_static_or_trigger_receivers(
                     my_trigger_rx,
                     &mid_step_gtran,
                     &shared_data,
-                    &mut trigger_data,
+                    &mut trigger_txs,
                     &mut commands,
                     &collision_root,
                     &mut dup_set,
@@ -457,9 +473,9 @@ fn move_unstuck_static_or_trigger_receivers(
             *reset_rx = my_static.unwrap();
         }
 
-        let reset_rx = trigger_data.get_mut(eid).ok().map(|inner| inner.1);
+        let reset_rx = trigger_rxs.get_mut(eid).ok().map(|inner| inner.1);
         if let Some(mut reset_rx) = reset_rx {
-            *reset_rx = my_trigger.unwrap();
+            *reset_rx = my_trigger_rx.unwrap();
         }
     }
 }

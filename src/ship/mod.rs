@@ -10,6 +10,7 @@ pub struct ShipBundle {
     spatial: SpatialBundle,
     dyno_tran: DynoTran,
     static_rx: StaticRx,
+    trigger_tx: TriggerTx,
     trigger_rx: TriggerRx,
     animation: AnimationManager<AnimationShip>,
     camera_leader: DynamicCameraLeader,
@@ -24,6 +25,13 @@ impl ShipBundle {
             dyno_tran: default(),
             static_rx: StaticRx::from_kind_n_shape(
                 StaticRxKind::Normal,
+                Shape::Circle {
+                    center: Vec2::ZERO,
+                    radius: 6.0,
+                },
+            ),
+            trigger_tx: TriggerTx::from_kind_n_shape(
+                TriggerKind::Ship,
                 Shape::Circle {
                     center: Vec2::ZERO,
                     radius: 6.0,

@@ -83,10 +83,10 @@ pub struct StaticCollisionRecord {
     /// Before collision, component of receivers velocity perpendicular to normal direction
     /// Name is weird because it's "parallel" to original vel of rx
     pub rx_par: Vec2,
-    pub provider_eid: Entity,
-    pub provider_kind: StaticTxKind,
-    pub receiver_eid: Entity,
-    pub receiver_kind: StaticRxKind,
+    pub tx_eid: Entity,
+    pub tx_kind: StaticTxKind,
+    pub rx_eid: Entity,
+    pub rx_kind: StaticRxKind,
 }
 #[derive(Bundle)]
 pub struct StaticCollisionBundle {

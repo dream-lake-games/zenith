@@ -7,7 +7,32 @@ pub enum TriggerKind {
     Ship,
 }
 
-/// Marks an object as being a "triggerable" physics object.
+/// Marks an object as being a trigger provider
+#[derive(Component, Debug, Clone, Reflect)]
+pub struct TriggerTx {
+    pub kind: TriggerKind,
+    pub bounds: Bounds,
+    pub collisions: VecDeque<Entity>,
+}
+impl TriggerTx {
+    pub fn from_kind_n_shape(kind: TriggerKind, shape: Shape) -> Self {
+        Self {
+            kind,
+            bounds: Bounds::from_shape(shape),
+            collisions: default(),
+        }
+    }
+
+    pub fn from_kind_n_shapes(kind: TriggerKind, shapes: Vec<Shape>) -> Self {
+        Self {
+            kind,
+            bounds: Bounds::from_shapes(shapes),
+            collisions: default(),
+        }
+    }
+}
+
+/// Marks an object as being a trigger receiver
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct TriggerRx {
     pub kind: TriggerKind,
@@ -22,13 +47,30 @@ impl TriggerRx {
             collisions: default(),
         }
     }
+
+    pub fn from_kind_n_shapes(kind: TriggerKind, shapes: Vec<Shape>) -> Self {
+        Self {
+            kind,
+            bounds: Bounds::from_shapes(shapes),
+            collisions: default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Reflect)]
+pub enum TriggerCollisionRole {
+    Tx,
+    Rx,
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct TriggerCollisionRecord {
     pub pos: Vec2,
-    pub other_eid: Entity,
-    pub other_kind: TriggerKind,
+    pub my_role: TriggerCollisionRole,
+    pub tx_eid: Entity,
+    pub tx_kind: TriggerKind,
+    pub rx_eid: Entity,
+    pub rx_kind: TriggerKind,
 }
 #[derive(Bundle)]
 pub struct TriggerCollisionBundle {

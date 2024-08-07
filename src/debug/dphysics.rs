@@ -22,6 +22,7 @@ fn draw_bounds(
     mut gz: Gizmos,
     static_txs: Query<(&GlobalTransform, &StaticTx)>,
     static_rxs: Query<(&GlobalTransform, &StaticRx)>,
+    trigger_txs: Query<(&GlobalTransform, &TriggerTx)>,
     trigger_rxs: Query<(&GlobalTransform, &TriggerRx)>,
 ) {
     for (gt, tx) in &static_txs {
@@ -33,6 +34,11 @@ fn draw_bounds(
         let (tran, angle) = gt.tran_n_angle();
         rx.bounds
             .draw(tran, angle, &mut gz, tailwind::AMBER_400.into());
+    }
+    for (gt, tx) in &trigger_txs {
+        let (tran, angle) = gt.tran_n_angle();
+        tx.bounds
+            .draw(tran, angle, &mut gz, tailwind::GREEN_400.into());
     }
     for (gt, rx) in &trigger_rxs {
         let (tran, angle) = gt.tran_n_angle();
