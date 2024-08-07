@@ -44,7 +44,10 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
         "wrap1",
         StaticTxKind::Normal,
         Vec2::new(0.0, room_state.room_size.y as f32 / 2.0),
-        Shape::Circle { radius: 15.0 },
+        Shape::Circle {
+            center: Vec2::ZERO,
+            radius: 15.0,
+        },
         &room_state,
     ));
 

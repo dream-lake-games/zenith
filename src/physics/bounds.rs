@@ -3,6 +3,7 @@ use crate::prelude::*;
 #[derive(Debug, Clone, Reflect)]
 pub enum Shape {
     Circle {
+        center: Vec2,
         radius: f32,
     },
     /// A polygonal shape. NOTE: Points on the exterior should be defined in CLOCKWISE order
@@ -17,7 +18,11 @@ impl Shape {
     pub fn closest_point(&self, placement: (Vec2, f32), rhs: Vec2) -> (f32, Vec2) {
         let (my_pos, my_rot) = placement;
         match self {
-            Self::Circle { radius: my_radius } => {
+            Self::Circle {
+                center,
+                radius: my_radius,
+            } => {
+                let my_pos = my_pos + *center;
                 let diff = rhs - my_pos;
                 let signed_dist = diff.length() - *my_radius;
                 let norm = diff.normalize_or_zero();
@@ -54,7 +59,11 @@ impl Shape {
         let (my_pos, _my_rot) = placement;
         let (rhs_bounds, rhs_pos, rhs_rot) = rhs;
         match self {
-            Self::Circle { radius: my_radius } => {
+            Self::Circle {
+                center,
+                radius: my_radius,
+            } => {
+                let my_pos = my_pos + *center;
                 let (signed_dist, cp) = rhs_bounds.closest_point((rhs_pos, rhs_rot), my_pos);
                 // NOTE: This abs is maybe not correct? Maybe it is?
                 // Basically it means we'll only bounce off if we're near the edge.
@@ -77,39 +86,83 @@ impl Shape {
 impl Shape {
     pub fn to_points(&self) -> Vec<Vec2> {
         match self {
-            Self::Circle { radius } => regular_polygon(radius.ceil() as u32 * 2, 0.0, *radius),
+            Self::Circle { center, radius } => {
+                let non_centered_points = regular_polygon(radius.ceil() as u32 * 2, 0.0, *radius);
+                non_centered_points
+                    .into_iter()
+                    .map(|p| p + *center)
+                    .collect()
+            }
             Self::Polygon { points } => points.clone(),
+        }
+    }
+
+    pub fn with_offset(self, offset: Vec2) -> Shape {
+        match self {
+            Self::Circle { center, radius } => Self::Circle {
+                center: center + offset,
+                radius,
+            },
+            Self::Polygon { points } => Self::Polygon {
+                points: points.into_iter().map(|p| p + offset).collect(),
+            },
         }
     }
 }
 #[derive(Debug, Clone, Reflect)]
 pub struct Bounds {
-    shape: Shape,
+    shapes: Vec<Shape>,
     // TODO IF NEEDED: Add additional info (like a bounding circle, max/min x/y) to speed up collision detection
 }
 impl Bounds {
     pub fn from_shape(shape: Shape) -> Self {
-        Self { shape }
+        Self {
+            shapes: vec![shape],
+        }
     }
 
-    pub fn get_shape(&self) -> &Shape {
-        &self.shape
+    pub fn from_shapes(shapes: Vec<Shape>) -> Self {
+        Self { shapes }
+    }
+
+    pub fn get_shapes(&self) -> &[Shape] {
+        &self.shapes
     }
 
     pub fn draw(&self, pos: Vec2, rot: f32, gz: &mut Gizmos, color: Color) {
-        // First draw the shape
-        match self.get_shape() {
-            Shape::Circle { radius } => {
-                gz.circle_2d(pos, *radius, color);
+        for shape in self.get_shapes() {
+            // First draw the shape
+            match shape {
+                Shape::Circle { center, radius } => {
+                    gz.circle_2d(pos + *center, *radius, color);
+                }
+                Shape::Polygon { points } => {
+                    for [p1, p2] in points.to_lines() {
+                        gz.line_2d(pos + p1.my_rotate(rot), pos + p2.my_rotate(rot), color);
+                    }
+                }
             }
-            Shape::Polygon { points } => {
-                for [p1, p2] in points.to_lines() {
-                    gz.line_2d(pos + p1.my_rotate(rot), pos + p2.my_rotate(rot), color);
+            // Then draw a line to show rotation (useful for shapes where rotation is not obvious)
+            let diff = Vec2::X.my_rotate(rot) * 4.0;
+            gz.line_2d(pos, pos + diff, color);
+        }
+    }
+
+    pub fn bounce_off(
+        &self,
+        my_tran_n_angle: (Vec2, f32),
+        other_thing: (&Self, Vec2, f32),
+    ) -> Option<(Vec2, Vec2)> {
+        let (other_bounds, other_tran, other_angle) = other_thing;
+        for my_shape in &self.shapes {
+            for other_shape in other_bounds.get_shapes() {
+                let bounce =
+                    my_shape.bounce_off(my_tran_n_angle, (other_shape, other_tran, other_angle));
+                if bounce.is_some() {
+                    return bounce;
                 }
             }
         }
-        // Then draw a line to show rotation (useful for circles)
-        let diff = Vec2::X.my_rotate(rot) * 4.0;
-        gz.line_2d(pos, pos + diff, color);
+        None
     }
 }

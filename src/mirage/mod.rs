@@ -1,8 +1,10 @@
 use crate::prelude::*;
 
 pub mod mirage_drawing;
+pub mod mirage_physics;
 
 pub use mirage_drawing::*;
+// pub use mirage_physics::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MirageSet;

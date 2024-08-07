@@ -24,6 +24,14 @@ impl StaticTx {
             collisions: default(),
         }
     }
+
+    pub fn from_kind_n_shapes(kind: StaticTxKind, shapes: Vec<Shape>) -> Self {
+        Self {
+            kind,
+            bounds: Bounds::from_shapes(shapes),
+            collisions: default(),
+        }
+    }
 }
 
 /// Different ways of interacting with statics on collision.

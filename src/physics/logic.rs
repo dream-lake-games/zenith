@@ -189,13 +189,9 @@ fn resolve_static_collisions(
         let my_tran_n_angle = tran.tran_n_angle();
         let my_tran_n_angle = (my_tran_n_angle.0 + gtran_offset, my_tran_n_angle.1);
         let rhs_tran_n_angle = tx_gtran.tran_n_angle();
-        let Some((mvmt, cp)) = rx.bounds.get_shape().bounce_off(
+        let Some((mvmt, cp)) = rx.bounds.bounce_off(
             my_tran_n_angle,
-            (
-                tx.bounds.get_shape(),
-                rhs_tran_n_angle.0,
-                rhs_tran_n_angle.1,
-            ),
+            (&tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
         ) else {
             // These things don't overlap, nothing to do
             continue;
@@ -242,9 +238,7 @@ fn resolve_static_collisions(
             (_, StaticRxKind::GoAround { mult }) => {
                 // Try to move perpendicularly around this thing
                 // TODO: Come up with a better system so we don't have to do this
-                if matches!(tx.bounds.get_shape(), Shape::Circle { .. }) {
-                    dyno_tran.vel += Vec2::new(mvmt.y, -mvmt.x) * mult as f32;
-                }
+                dyno_tran.vel += Vec2::new(mvmt.y, -mvmt.x) * mult as f32;
             }
             (StaticTxKind::Normal, StaticRxKind::Normal) => {
                 dyno_tran.vel = bounce_with_friction(dyno_tran.vel, 0.2, 0.03);
@@ -287,13 +281,9 @@ fn resolve_trigger_collisions(
         let my_tran_n_angle = gtran.tran_n_angle();
         let (_, other_gtran) = shared_data.get(other_eid).unwrap();
         let rhs_tran_n_angle = other_gtran.tran_n_angle();
-        let Some((_, cp)) = rx.bounds.get_shape().bounce_off(
+        let Some((_, cp)) = rx.bounds.bounce_off(
             my_tran_n_angle,
-            (
-                other_rx.bounds.get_shape(),
-                rhs_tran_n_angle.0,
-                rhs_tran_n_angle.1,
-            ),
+            (&other_rx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
         ) else {
             // These things don't overlap, nothing to do
             continue;

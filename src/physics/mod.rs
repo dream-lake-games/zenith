@@ -32,6 +32,8 @@ struct PhysicsInitialized;
 pub(super) struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<StaticTx>();
+
         app.add_plugins(bullet_time::BulletTimePlugin);
         collisions::register_collisions(app);
         logic::register_logic(app);
