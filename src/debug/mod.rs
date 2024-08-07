@@ -38,7 +38,7 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
 fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
     let room_state = RoomState::xth_encounter(EncounterKind::SimpOnly, 1);
 
-    commands.spawn(ShipBundle::new(default()));
+    commands.spawn(ShipBundle::new(default(), &room_state));
 
     commands.spawn(PlanetBundle::new(
         "wrap1",
