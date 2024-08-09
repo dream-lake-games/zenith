@@ -1,5 +1,12 @@
 use crate::prelude::*;
 
+pub mod parallax;
+
+pub use parallax::*;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CameraSet;
+
 /// When the camera is in "Follow" mode, it will move to show the entity with this
 /// component at the center of the screen every frame iff:
 /// - There is exactly one such entity
@@ -18,8 +25,20 @@ enum DynamicCameraMode {
     Follow,
 }
 
+#[derive(Resource, Reflect)]
+pub struct DynamicCameraRoot {
+    eid: Entity,
+}
+impl DynamicCameraRoot {
+    pub fn eid(&self) -> Entity {
+        self.eid
+    }
+}
+
 #[derive(Component, Debug, Clone, Reflect)]
-pub struct DynamicCameraMarker;
+pub struct DynamicCameraMarker {
+    first_pos: Vec2,
+}
 
 #[derive(Bundle)]
 pub struct DynamicCameraBundle {
@@ -30,14 +49,23 @@ pub struct DynamicCameraBundle {
 }
 
 fn setup_camera(mut commands: Commands, root: Res<LayerRoot>) {
-    commands
+    let eid = commands
         .spawn(DynamicCameraBundle {
             name: Name::new("dynamic_camera"),
-            marker: DynamicCameraMarker,
+            marker: DynamicCameraMarker {
+                first_pos: Vec2::ZERO,
+            },
             mode: DynamicCameraMode::Follow,
             spatial: default(),
         })
-        .set_parent(root.eid());
+        .set_parent(root.eid())
+        .id();
+    commands.insert_resource(DynamicCameraRoot { eid });
+}
+
+fn set_first_pos(mut camera_q: Query<(&mut DynamicCameraMarker, &Transform)>) {
+    let (mut root, cam_tran) = camera_q.single_mut();
+    root.first_pos = cam_tran.translation.truncate();
 }
 
 fn move_dynamic_camera(
@@ -88,16 +116,18 @@ impl Plugin for CameraPlugin {
         app.register_type::<DynamicCameraMode>();
         app.register_type::<DynamicCameraMarker>();
 
-        app.add_systems(Startup, setup_camera.after(RootInit));
+        app.add_systems(Startup, setup_camera.after(RootInit).in_set(CameraSet));
         app.add_systems(
             FixedPostUpdate,
             (move_dynamic_camera, move_layer_cameras)
                 .chain()
+                .in_set(CameraSet)
                 .before(PhysicsSet),
         );
-        // app.add_systems(
-        //     PostUpdate,
-        //     (move_dynamic_camera, move_layer_cameras.chain()),
-        // );
+        app.add_systems(
+            FixedFirst,
+            set_first_pos.before(PhysicsSet).in_set(CameraSet),
+        );
+        app.add_plugins(parallax::ParallaxPlugin);
     }
 }

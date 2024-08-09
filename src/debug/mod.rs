@@ -35,7 +35,7 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
     config.render_layers = SpriteLayer::render_layers();
 }
 
-fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
+fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
     let room_state = RoomState::xth_encounter(EncounterKind::SimpOnly, 1);
 
     commands.spawn(ShipBundle::new(default(), &room_state));
@@ -65,26 +65,42 @@ fn debug_startup(mut commands: Commands, ass: Res<AssetServer>) {
         spat_tran!(-80.0, room_state.room_size.y as f32 / 2.0),
     ));
 
-    for (ix, offset) in room_state
-        .mirage_offsets()
-        .into_iter()
-        .chain([Vec2::ZERO].into_iter())
-        .enumerate()
-    {
-        commands.spawn((
-            Name::new(format!("test-grid({ix})")),
-            SpriteBundle {
-                sprite: Sprite {
-                    custom_size: Some(Vec2::new(640.0, 360.0)),
-                    ..default()
-                },
-                texture: ass.load("play/test-grid.png"),
-                transform: tran_tran!(offset.extend(0.0)),
-                ..default()
-            },
-            BgSpriteLayer::render_layers(),
-        ));
-    }
+    // commands
+    //     .spawn((
+    //         Name::new("parallex_star_test"),
+    //         ParallaxBundle::new(
+    //             Vec3::new(10.0, 10.0, -5.0),
+    //             Parallax {
+    //                 wrap: 2.0,
+    //                 distance: 2.0,
+    //                 apply_scale: true,
+    //             },
+    //         ),
+    //         AnimationManager::<AnimationStar>::new(),
+    //     ))
+    //     .set_parent(camera_root.eid());
+    spawn_stars(&mut commands, 100, 2.0, 2.0..10.0, camera_root.eid());
+
+    // for (ix, offset) in room_state
+    //     .mirage_offsets()
+    //     .into_iter()
+    //     .chain([Vec2::ZERO].into_iter())
+    //     .enumerate()
+    // {
+    //     commands.spawn((
+    //         Name::new(format!("test-grid({ix})")),
+    //         SpriteBundle {
+    //             sprite: Sprite {
+    //                 custom_size: Some(Vec2::new(640.0, 360.0)),
+    //                 ..default()
+    //             },
+    //             texture: ass.load("play/test-grid.png"),
+    //             transform: tran_tran!(offset.extend(0.0)),
+    //             ..default()
+    //         },
+    //         BgSpriteLayer::render_layers(),
+    //     ));
+    // }
 }
 
 fn debug_update(
@@ -150,7 +166,7 @@ impl Plugin for DebugPlugin {
         dphysics::register_dphysics(app);
 
         // Random testing
-        app.add_systems(Startup, debug_startup);
+        app.add_systems(Startup, debug_startup.after(CameraSet));
         app.add_systems(Update, debug_update);
     }
 }

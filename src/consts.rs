@@ -30,7 +30,7 @@ pub const MENU_VEC_f32: Vec2 = Vec2::new(MENU_WIDTH_f32, MENU_HEIGHT_f32);
 
 /// To avoid pixels that are too obviously seen, render to a quad this much bigger than ideal,
 /// and then zoom the camera out by this amount so it still is "ideal" size
-pub const DETAIL_GROWTH: u32 = 4;
+pub const DETAIL_GROWTH: u32 = 8;
 #[allow(nonstandard_style)]
 pub const DETAIL_GROWTH_f32: f32 = DETAIL_GROWTH as f32;
 
