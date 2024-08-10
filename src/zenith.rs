@@ -5,6 +5,7 @@ pub mod animation;
 pub mod camera;
 pub mod consts;
 pub mod debug;
+pub mod enemy;
 pub mod environment;
 pub mod input;
 pub mod layer;
@@ -23,6 +24,7 @@ pub mod prelude {
     pub use super::camera::*;
     pub use super::consts::*;
     pub use super::debug::*;
+    pub use super::enemy::*;
     pub use super::environment::*;
     pub use super::input::*;
     pub use super::layer::*;

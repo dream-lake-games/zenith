@@ -38,6 +38,7 @@ pub const DETAIL_GROWTH_f32: f32 = DETAIL_GROWTH as f32;
 // Remember, each of these zix only effect interactions within the same layer, between layers, order is determined
 pub const ZIX_BACKGROUND: f32 = -400.0;
 pub const ZIX_DEBUG: f32 = 350.0;
+pub const ZIX_ENEMY: f32 = 200.0;
 pub const ZIX_MENU: f32 = 300.0;
 pub const ZIX_PARTICLES: f32 = -300.0;
 pub const ZIX_PAUSE: f32 = 200.0;

@@ -1,10 +1,13 @@
 use crate::prelude::*;
 
+pub mod avoid;
 pub mod bounds;
 pub mod bullet_time;
 pub mod collisions;
 pub mod dyno;
+pub mod follow;
 mod logic;
+pub mod patrol;
 pub mod statics;
 pub mod triggers;
 
@@ -12,6 +15,7 @@ pub use bounds::*;
 pub use bullet_time::*;
 // pub use collisions::*;
 pub use dyno::*;
+pub use follow::*;
 pub use statics::*;
 pub use triggers::*;
 
@@ -36,6 +40,7 @@ impl Plugin for PhysicsPlugin {
 
         app.add_plugins(bullet_time::BulletTimePlugin);
         collisions::register_collisions(app);
+        follow::register_follow(app);
         logic::register_logic(app);
     }
 }

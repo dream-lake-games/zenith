@@ -45,11 +45,8 @@ struct MirageMeshMatBundle {
 pub fn spawn_animation_manager_mirages<StateMachine: AnimationStateMachine>(
     mut commands: Commands,
     managers: Query<
-        (Entity, &Children),
-        (
-            Changed<AnimationManager<StateMachine>>,
-            With<MirageAnimationManager>,
-        ),
+        (Entity, &Children, &MirageAnimationManager),
+        (Changed<AnimationManager<StateMachine>>,),
     >,
     ditto_q: Query<(
         Entity,
@@ -58,22 +55,24 @@ pub fn spawn_animation_manager_mirages<StateMachine: AnimationStateMachine>(
         &RenderLayers,
     )>,
 ) {
-    for (manager_eid, children) in &managers {
+    for (manager_eid, children, mirage) in &managers {
         for (ix, child) in children.iter().enumerate() {
             let (ditto_eid, mesh, mat, render_layers) = ditto_q.get(*child).unwrap();
-            commands
-                .spawn(MirageMeshMatBundle {
-                    name: Name::new(format!("mirage_{ix}")),
-                    marker: MirageMeshMat {
-                        following: ditto_eid,
-                        offset: Vec2::new(20.0, 20.0),
-                    },
-                    spatial: default(),
-                    mesh: mesh.clone(),
-                    mat: mat.clone(),
-                    render_layers: render_layers.clone(),
-                })
-                .set_parent(manager_eid);
+            for (jx, offset) in mirage.offsets.iter().enumerate() {
+                commands
+                    .spawn(MirageMeshMatBundle {
+                        name: Name::new(format!("mirage_{ix}_{jx}")),
+                        marker: MirageMeshMat {
+                            following: ditto_eid,
+                            offset: *offset,
+                        },
+                        spatial: default(),
+                        mesh: mesh.clone(),
+                        mat: mat.clone(),
+                        render_layers: render_layers.clone(),
+                    })
+                    .set_parent(manager_eid);
+            }
         }
     }
 }
