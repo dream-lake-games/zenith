@@ -16,6 +16,7 @@ pub use bullet_time::*;
 // pub use collisions::*;
 pub use dyno::*;
 pub use follow::*;
+pub use patrol::*;
 pub use statics::*;
 pub use triggers::*;
 

@@ -3,7 +3,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::prelude::*;
 
-mod dphysics;
+pub mod dphysics;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Reflect)]
 pub struct DebugState {
@@ -69,7 +69,7 @@ fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
 
     commands.spawn(SuicidoBundle::new(
         Vec2::new(0.0, -10.0),
-        ship_id,
+        // ship_id,
         &room_state,
     ));
 }

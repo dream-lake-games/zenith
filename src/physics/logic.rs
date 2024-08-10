@@ -196,9 +196,9 @@ fn resolve_static_collisions(
 ) {
     for (tx_eid, mut tx, tx_gtran) in providers {
         // Correct the global/local translation and see if there is a collision
-        let my_tran_n_angle = tran.tran_n_angle();
+        let my_tran_n_angle = tran.pos_n_angle();
         let my_tran_n_angle = (my_tran_n_angle.0 + gtran_offset, my_tran_n_angle.1);
-        let rhs_tran_n_angle = tx_gtran.tran_n_angle();
+        let rhs_tran_n_angle = tx_gtran.pos_n_angle();
         let Some((mvmt, cp)) = rx.bounds.bounce_off(
             my_tran_n_angle,
             (&tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
@@ -288,10 +288,10 @@ fn resolve_trigger_collisions(
             // You can't collide with your own trigger, idiot
             continue;
         }
-        let my_tran_n_angle = gtran.tran_n_angle();
+        let my_tran_n_angle = gtran.pos_n_angle();
         let (_, other_gtran) = shared_data.get(other_eid).unwrap();
-        let rhs_tran_n_angle = other_gtran.tran_n_angle();
-        let Some((_, cp)) = rx.bounds.do_overlap(
+        let rhs_tran_n_angle = other_gtran.pos_n_angle();
+        let Some((_, cp)) = rx.bounds.overlap_out(
             my_tran_n_angle,
             (&other_tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
         ) else {
@@ -510,7 +510,7 @@ fn move_stuck_static_receiver_dynos(
             continue;
         };
         dyno_tran.vel = Vec2::ZERO;
-        let (provider_tran, provider_angle) = provider_gtran.tran_n_angle();
+        let (provider_tran, provider_angle) = provider_gtran.pos_n_angle();
         let angle_diff = provider_angle - stuck.parent_initial_angle;
         tran.set_angle(stuck.my_initial_angle + angle_diff);
         let rotated_pos = stuck.initial_offset.my_rotate(angle_diff);

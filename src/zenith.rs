@@ -39,6 +39,7 @@ pub mod prelude {
     pub use super::state::*;
     pub use bevy::color::palettes::tailwind;
     pub use bevy::input::common_conditions::input_toggle_active;
+    pub use bevy::math::VectorSpace;
     pub use bevy::prelude::*;
     pub use bevy::render::view::*;
     pub use bevy::utils::{HashMap, HashSet};
@@ -59,6 +60,7 @@ pub fn launch_app(mut app: App) {
     ));
     app.add_plugins(animation::AnimationPlugin);
     app.add_plugins(camera::CameraPlugin);
+    app.add_plugins(enemy::EnemyPlugin);
     app.add_plugins(environment::EnvironmentPlugin);
     app.add_plugins(input::CommonInputPlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);

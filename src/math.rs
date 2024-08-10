@@ -62,11 +62,11 @@ impl MyRotations for Vec2 {
 
 /// Bevy API is not quite what I want
 pub trait MyTranNAngleGetter {
-    fn tran_n_angle(&self) -> (Vec2, f32);
+    fn pos_n_angle(&self) -> (Vec2, f32);
 }
 
 impl MyTranNAngleGetter for Transform {
-    fn tran_n_angle(&self) -> (Vec2, f32) {
+    fn pos_n_angle(&self) -> (Vec2, f32) {
         (
             self.translation.truncate(),
             self.rotation.to_euler(EulerRot::XYZ).2,
@@ -75,7 +75,7 @@ impl MyTranNAngleGetter for Transform {
 }
 
 impl MyTranNAngleGetter for GlobalTransform {
-    fn tran_n_angle(&self) -> (Vec2, f32) {
+    fn pos_n_angle(&self) -> (Vec2, f32) {
         let (_, quat, tran) = self.to_scale_rotation_translation();
         (tran.truncate(), quat.to_euler(EulerRot::XYZ).2)
     }

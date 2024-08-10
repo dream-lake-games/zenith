@@ -198,7 +198,7 @@ impl Bounds {
         None
     }
 
-    pub fn do_overlap(
+    pub fn overlap_out(
         &self,
         my_tran_n_angle: (Vec2, f32),
         other_thing: (&Self, Vec2, f32),
