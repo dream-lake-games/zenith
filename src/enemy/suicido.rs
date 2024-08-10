@@ -27,7 +27,7 @@ impl SuicidoBundle {
                 },
             ),
             dyno_tran: default(),
-            follow: Follow::new(ship_eid, 60.0, 60.0),
+            follow: Follow::new(ship_eid, 60.0, 60.0).with_acceptable_dist_range((50.0, f32::MAX)),
             wrap: RoomWrap,
             animation: AnimationManager::new(),
             mirage: MirageAnimationManager::room_offsets(room_state),

@@ -79,7 +79,15 @@ fn update_follow(
             }
         }
         let dir = diff.normalize_or_zero();
-        let accel = dir * follow.accel;
+        let accel = if let Some((min_dist_sq, _)) = follow.acceptable_dist_range_sq {
+            if diff.length_squared() < min_dist_sq {
+                dir * -follow.accel
+            } else {
+                dir * follow.accel
+            }
+        } else {
+            dir * follow.accel
+        };
         // TODO: This basically functions as a global speed cap.
         // It really should like only slow down this object or something
         dyno_tran.vel += accel * bullet_time.delta_seconds();
