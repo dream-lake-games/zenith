@@ -128,7 +128,6 @@ fn debug_update(
         }
     }
     for evt in launch.read() {
-        println!("launch!");
         for (eid, mut dyno_tran, mut tran) in &mut ship {
             commands.entity(eid).remove::<Stuck>();
             dyno_tran.vel = evt.0;

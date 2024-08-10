@@ -1,6 +1,6 @@
 //! I've found this kind of thing useful to have in the past.
 //! Basically you put a Birthing/Dying timer on entities.
-//! When the timer expires, there will be one pass of the schedule where this runs (in this game, FixedUpdate)
+//! When the timer expires, there will be one pass of the schedule where this runs (Main)
 //! where `Birth` or `Death` is observable. After that, the component will be removed/entity despawned.
 
 use crate::prelude::*;
@@ -66,7 +66,7 @@ impl Plugin for LifecyclePlugin {
         app.register_type::<Dying>();
         app.register_type::<Birthing>();
         app.add_systems(
-            FixedPostUpdate,
+            PostUpdate,
             (update_final_states, update_transition_states)
                 .chain()
                 .after(AnimationSet)

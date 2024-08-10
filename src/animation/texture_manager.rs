@@ -281,19 +281,19 @@ fn play_animations<StateMachine: TextureStateMachine>(
 pub(super) fn register_texture_manager<StateMachine: TextureStateMachine>(app: &mut App) {
     app.register_type::<TextureManager<StateMachine>>();
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         handle_manager_changes::<StateMachine>
             .in_set(AnimationSet)
             .in_set(ManagersSet),
     );
     app.add_systems(
-        FixedUpdate,
+        Update,
         play_animations::<StateMachine>
             .in_set(AnimationSet)
             .in_set(ManagersSet),
     );
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         spawn_texture_manager_mirages::<StateMachine>
             .in_set(AnimationSet)
             .in_set(MirageSet)

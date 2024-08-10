@@ -544,14 +544,14 @@ fn apply_room_wrap(
 pub(super) fn register_logic(app: &mut App) {
     // Reset collisions during preupdate
     app.add_systems(
-        FixedPreUpdate,
+        PreUpdate,
         reset_collision_records
             .in_set(PhysicsSet)
             .run_if(in_state(PhysicsState::Active)),
     );
     // Enforce invariants during update when in dev mode
     app.add_systems(
-        FixedUpdate,
+        Update,
         enforce_invariants
             .in_set(PhysicsSet)
             .run_if(in_state(PhysicsState::Active))
@@ -559,7 +559,7 @@ pub(super) fn register_logic(app: &mut App) {
     );
     // Systems for detecting and resolving collisions
     app.add_systems(
-        FixedUpdate,
+        Update,
         (
             initialize_physics,
             move_uninteresting_dynos,
@@ -574,7 +574,7 @@ pub(super) fn register_logic(app: &mut App) {
     );
     // Apply room wrap
     app.add_systems(
-        FixedUpdate,
+        Update,
         apply_room_wrap
             .in_set(PhysicsSet)
             .after(CollisionsSet)

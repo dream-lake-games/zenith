@@ -97,9 +97,6 @@ impl Plugin for ParallaxPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Parallax>();
 
-        app.add_systems(
-            FixedPostUpdate,
-            move_parallaxes.before(AnimationSet).after(PhysicsSet),
-        );
+        app.add_systems(PostUpdate, move_parallaxes.after(PhysicsSet));
     }
 }

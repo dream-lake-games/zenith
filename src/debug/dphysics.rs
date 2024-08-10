@@ -50,7 +50,7 @@ fn draw_bounds(
 pub(super) fn register_dphysics(app: &mut App) {
     app.add_computed_state::<ShowPhysicsBounds>();
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         draw_bounds
             .run_if(in_state(ShowPhysicsBounds))
             .after(AnimationSet),

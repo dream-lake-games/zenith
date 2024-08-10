@@ -284,22 +284,24 @@ fn play_animations<StateMachine: AnimationStateMachine>(
 pub(super) fn register_animation_manager<StateMachine: AnimationStateMachine>(app: &mut App) {
     app.register_type::<AnimationManager<StateMachine>>();
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         handle_manager_changes::<StateMachine>
             .in_set(AnimationSet)
             .in_set(ManagersSet),
     );
     app.add_systems(
-        FixedUpdate,
+        Update,
         play_animations::<StateMachine>
             .in_set(AnimationSet)
-            .in_set(ManagersSet),
+            .in_set(ManagersSet)
+            .after(PhysicsSet),
     );
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         spawn_animation_manager_mirages::<StateMachine>
             .in_set(AnimationSet)
             .in_set(MirageSet)
+            .after(PhysicsSet)
             .after(ManagersSet),
     );
 }

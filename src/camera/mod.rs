@@ -118,16 +118,13 @@ impl Plugin for CameraPlugin {
 
         app.add_systems(Startup, setup_camera.after(RootInit).in_set(CameraSet));
         app.add_systems(
-            FixedPostUpdate,
+            PostUpdate,
             (move_dynamic_camera, move_layer_cameras)
                 .chain()
                 .in_set(CameraSet)
                 .before(PhysicsSet),
         );
-        app.add_systems(
-            FixedFirst,
-            set_first_pos.before(PhysicsSet).in_set(CameraSet),
-        );
+        app.add_systems(First, set_first_pos.before(PhysicsSet).in_set(CameraSet));
         app.add_plugins(parallax::ParallaxPlugin);
     }
 }

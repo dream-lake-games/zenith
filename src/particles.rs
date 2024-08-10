@@ -260,13 +260,13 @@ pub(super) struct ParticlesPlugin;
 impl Plugin for ParticlesPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            FixedPostUpdate,
+            PostUpdate,
             materialize_particles
                 .run_if(in_state(PhysicsState::Active))
                 .in_set(ParticlesSet),
         );
         app.add_systems(
-            FixedUpdate,
+            Update,
             update_particles_internal
                 .run_if(in_state(PhysicsState::Active))
                 .in_set(ParticlesSet),

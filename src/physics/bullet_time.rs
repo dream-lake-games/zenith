@@ -3,7 +3,7 @@ use crate::prelude::*;
 #[derive(Resource, Debug, Clone, Reflect)]
 pub struct BulletTime {
     time_factor: f32,
-    last_delta: Duration,
+    main_duration: Duration,
 }
 impl BulletTime {
     const NORMAL: f32 = 1.0;
@@ -12,16 +12,16 @@ impl BulletTime {
     pub fn new() -> Self {
         Self {
             time_factor: 1.0,
-            last_delta: default(),
+            main_duration: Duration::default(),
         }
     }
 
     pub fn delta(&self) -> Duration {
-        self.last_delta.mul_f32(self.time_factor)
+        self.main_duration
     }
 
     pub fn delta_seconds(&self) -> f32 {
-        self.last_delta.as_secs_f32() * self.time_factor
+        self.main_duration.as_secs_f32()
     }
 
     pub fn set_normal(&mut self) {
@@ -37,20 +37,8 @@ impl BulletTime {
     }
 }
 
-#[derive(Resource)]
-struct FixedTimeIntervals {
-    last_time: std::time::Instant,
-}
-
-fn update_bullet_time_delta(
-    mut bullet_time: ResMut<BulletTime>,
-    mut fixed_time: ResMut<FixedTimeIntervals>,
-) {
-    let now = std::time::Instant::now();
-    let diff = now - fixed_time.last_time;
-    fixed_time.last_time = now;
-    println!("fps: {:?}", 1.0 / diff.as_secs_f64());
-    bullet_time.last_delta = diff;
+fn update_bullet_time(mut bullet_time: ResMut<BulletTime>, time: Res<Time>) {
+    bullet_time.main_duration = time.delta().mul_f32(bullet_time.time_factor);
 }
 
 pub(super) struct BulletTimePlugin;
@@ -58,9 +46,6 @@ impl Plugin for BulletTimePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<BulletTime>();
         app.insert_resource(BulletTime::new());
-        app.insert_resource(FixedTimeIntervals {
-            last_time: std::time::Instant::now(),
-        });
-        app.add_systems(FixedFirst, update_bullet_time_delta.before(CameraSet));
+        app.add_systems(First, update_bullet_time);
     }
 }

@@ -39,3 +39,11 @@ target_sdk_version = 34
 [package.metadata.android.application]
 # icon = "@mipmap/ic_launcher"
 label = "zenith-label"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3

@@ -140,7 +140,7 @@ pub(super) fn register_mirage_drawing(app: &mut App) {
     app.register_type::<MirageMeshMat>();
 
     app.add_systems(
-        FixedPostUpdate,
+        PostUpdate,
         update_mirage_mesh_mats
             .after(AnimationSet)
             .in_set(MirageSet),
