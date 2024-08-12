@@ -103,6 +103,7 @@ impl_root_init!(
     MenuRoot {
         offset: Vec3::new(0.0, 0.0, ZIX_MENU),
     },
+    MirageRoot,
     ParticlesRoot {
         offset: Vec3::new(0.0, 0.0, ZIX_PARTICLES),
     },

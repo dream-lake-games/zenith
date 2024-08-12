@@ -9,6 +9,8 @@ pub struct Follow {
     max_speed: f32,
     /// If provided, will not do anything when target is in this range
     acceptable_dist_range_sq: Option<(f32, f32)>,
+    /// If true, will rotate to look at the target
+    look_at_target: bool,
 }
 impl Follow {
     pub fn new(eid: Entity, accel: f32, max_speed: f32) -> Self {
@@ -17,6 +19,7 @@ impl Follow {
             accel,
             max_speed,
             acceptable_dist_range_sq: None,
+            look_at_target: false,
         }
     }
 
@@ -36,10 +39,19 @@ impl Follow {
         self.set_acceptable_dist_range(range);
         self
     }
+
+    pub fn set_look_at_target(&mut self, look_at_target: bool) {
+        self.look_at_target = look_at_target;
+    }
+
+    pub fn with_look_at_target(mut self, look_at_target: bool) -> Self {
+        self.set_look_at_target(look_at_target);
+        self
+    }
 }
 
 fn update_follow(
-    mut follow: Query<(&Follow, &mut DynoTran, &GlobalTransform)>,
+    mut follow: Query<(&Follow, &mut DynoTran, &GlobalTransform, &mut Transform)>,
     shared_data: Query<&GlobalTransform>,
     bullet_time: Res<BulletTime>,
     meta_state: Res<State<MetaState>>,
@@ -49,7 +61,7 @@ fn update_follow(
         .get_room_state()
         .map(|room_state| room_state.room_size.as_vec2())
         .unwrap_or(IDEAL_VEC_f32);
-    for (follow, mut dyno_tran, gtran) in &mut follow {
+    for (follow, mut dyno_tran, gtran, mut tran) in &mut follow {
         let Ok(target_gtran) = shared_data.get(follow.eid) else {
             continue;
         };
@@ -72,6 +84,11 @@ fn update_follow(
             },
         };
         let dist_sq = diff.length_squared();
+        // Update the angle if we're supposed to
+        if follow.look_at_target {
+            let angle = diff.to_angle();
+            tran.set_angle(angle);
+        }
         if let Some((min_dist_sq, max_dist_sq)) = follow.acceptable_dist_range_sq {
             if dist_sq >= min_dist_sq && dist_sq <= max_dist_sq {
                 // We're in the acceptable range, chill

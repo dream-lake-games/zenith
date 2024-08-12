@@ -146,3 +146,15 @@ macro_rules! impl_get_set_with_cloned {
     };
 }
 pub use impl_get_set_with_cloned;
+
+/// For including a tab-activated debug panel for a give resource
+#[macro_export]
+macro_rules! debug_resource {
+    ($app:expr, $resource:ty) => {{
+        $app.add_plugins(
+            ResourceInspectorPlugin::<$resource>::new()
+                .run_if(input_toggle_active(false, KeyCode::Tab)),
+        );
+    }};
+}
+pub use debug_resource;

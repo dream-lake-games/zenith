@@ -54,6 +54,7 @@ pub fn spawn_animation_manager_mirages<StateMachine: AnimationStateMachine>(
         &Handle<AnimationMaterial>,
         &RenderLayers,
     )>,
+    root: Res<MirageRoot>,
 ) {
     for (manager_eid, children, mirage) in &managers {
         for (ix, child) in children.iter().enumerate() {
@@ -71,7 +72,7 @@ pub fn spawn_animation_manager_mirages<StateMachine: AnimationStateMachine>(
                         mat: mat.clone(),
                         render_layers: render_layers.clone(),
                     })
-                    .set_parent(manager_eid);
+                    .set_parent(root.eid());
             }
         }
     }
@@ -89,6 +90,7 @@ pub fn spawn_texture_manager_mirages<StateMachine: TextureStateMachine>(
         &Handle<AnimationMaterial>,
         &RenderLayers,
     )>,
+    root: Res<MirageRoot>,
 ) {
     for (manager_eid, mirage, children) in &managers {
         for (ix, child) in children.iter().enumerate() {
@@ -106,7 +108,7 @@ pub fn spawn_texture_manager_mirages<StateMachine: TextureStateMachine>(
                         mat: mat.clone(),
                         render_layers: render_layers.clone(),
                     })
-                    .set_parent(manager_eid);
+                    .set_parent(root.eid());
             }
         }
     }
@@ -115,7 +117,7 @@ pub fn spawn_texture_manager_mirages<StateMachine: TextureStateMachine>(
 fn update_mirage_mesh_mats(
     mut commands: Commands,
     reference: Query<
-        &Transform,
+        &GlobalTransform,
         (
             With<Mesh2dHandle>,
             With<Handle<AnimationMaterial>>,
@@ -129,9 +131,11 @@ fn update_mirage_mesh_mats(
             commands.entity(eid).despawn_recursive();
             continue;
         };
-        *tran = ref_tran.clone();
+        *tran = ref_tran.compute_transform();
         tran.translation.x += info.offset.x;
         tran.translation.y += info.offset.y;
+        let new_global: GlobalTransform = (tran.clone()).into();
+        commands.entity(eid).insert(new_global);
     }
 }
 
@@ -142,6 +146,7 @@ pub(super) fn register_mirage_drawing(app: &mut App) {
         PostUpdate,
         update_mirage_mesh_mats
             .after(AnimationSet)
+            .after(TransformSystem::TransformPropagate)
             .in_set(MirageSet),
     );
 }

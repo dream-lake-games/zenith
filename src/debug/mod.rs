@@ -69,7 +69,7 @@ fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
 
     commands.spawn(SuicidoBundle::new(
         Vec2::new(0.0, -10.0),
-        // ship_id,
+        ship_id,
         &room_state,
     ));
 }
@@ -122,15 +122,9 @@ impl Plugin for DebugPlugin {
 
         // Debug
         app.insert_resource(DebugInteractive(DebugState::default()));
-        app.add_plugins(
-            ResourceInspectorPlugin::<DebugInteractive>::new()
-                .run_if(input_toggle_active(false, KeyCode::Tab)),
-        );
+        debug_resource!(app, DebugInteractive);
         app.add_systems(Update, update_debug_state.run_if(in_state(AppMode::Dev)));
-        app.add_plugins(
-            ResourceInspectorPlugin::<State<MetaState>>::new()
-                .run_if(input_toggle_active(false, KeyCode::Tab)),
-        );
+        debug_resource!(app, State<MetaState>);
 
         // Physics
         dphysics::register_dphysics(app);
