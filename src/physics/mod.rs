@@ -11,6 +11,7 @@ pub mod patrol;
 pub mod statics;
 pub mod triggers;
 
+use bevy::ecs::schedule::ScheduleLabel;
 pub use bounds::*;
 pub use bullet_time::*;
 // pub use collisions::*;
@@ -33,6 +34,11 @@ struct CollisionsSet;
 /// This struct basically marks any object whose physics stuff is "ready" (been around >= 1 frame)
 #[derive(Component)]
 struct PhysicsInitialized;
+
+/// A schedule that will run every FRAMERATE of IN-GAME time
+/// So things like drag will be applied consistently in and out of bullet time
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BulletUpdate;
 
 pub(super) struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {

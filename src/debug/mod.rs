@@ -67,11 +67,7 @@ fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
 
     spawn_stars(&mut commands, 100, 2.0, 2.0..10.0, camera_root.eid());
 
-    commands.spawn(SuicidoBundle::new(
-        Vec2::new(0.0, -10.0),
-        ship_id,
-        &room_state,
-    ));
+    commands.spawn(SuicidoBundle::new(Vec2::new(0.0, -10.0), &room_state));
 }
 
 fn debug_update(
@@ -82,6 +78,7 @@ fn debug_update(
     mut fire: EventReader<Fire>,
     mut ship: Query<(Entity, &mut DynoTran, &mut Transform), With<Ship>>,
     mut planet_textures: Query<&mut TextureManager<TextureTestPlanetState>>,
+    room_state: Res<State<RoomState>>,
 ) {
     if keyboard.just_pressed(KeyCode::BracketLeft) {
         bullet_time.set_normal();
@@ -98,6 +95,9 @@ fn debug_update(
             planet_texture.set_state(next_color);
         }
     }
+    if keyboard.just_pressed(KeyCode::Backspace) {
+        commands.spawn(SuicidoBundle::new(Vec2::new(0.0, -10.0), &room_state.get()));
+    }
     for evt in launch.read() {
         for (eid, mut dyno_tran, mut tran) in &mut ship {
             commands.entity(eid).remove::<Stuck>();
@@ -106,7 +106,7 @@ fn debug_update(
         }
     }
     for _ in fire.read() {
-        println!("fire!");
+        // println!("fire!");
     }
 }
 

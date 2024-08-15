@@ -9,7 +9,7 @@ impl Patrollable for Ship {}
 pub(super) struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        register_patrol::<Ship>(app);
+        register_patrol::<Ship, DefaultPatrollable>(app);
 
         suicido::register_suicidos(app);
     }

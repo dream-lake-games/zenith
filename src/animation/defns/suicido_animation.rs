@@ -1,15 +1,15 @@
 use super::*;
 
 defn_animation!(
-    AnimationSuicido,
+    AnimationSuicidoBody,
     bodies: [
-        wander: {
-            path: "enemies/suicido/wander.png",
+        charge: {
+            path: "enemies/suicido/charge.png",
             size: (16, 16),
             length: 4,
         },
-        charge: {
-            path: "enemies/suicido/charge.png",
+        launch: {
+            path: "enemies/suicido/launch.png",
             size: (16, 16),
             length: 4,
             fps: 12.0,
@@ -18,6 +18,7 @@ defn_animation!(
             path: "enemies/suicido/explode.png",
             size: (16, 16),
             length: 4,
+            fps: 12.0,
         },
     ],
     states: [
@@ -26,15 +27,37 @@ defn_animation!(
                 charge,
             ],
         },
-        Wander: {
+        Launch: {
             parts: [
-                wander,
+                launch,
             ],
         },
         Explode: {
             parts: [
                 explode,
             ],
+            #[special]
+            next: HideThenDie(0.1),
         }
+    ],
+);
+
+defn_animation!(
+    AnimationSuicidoAnticipation,
+    bodies: [
+        core: {
+            path: "enemies/suicido/anticipation.png",
+            size: (64, 64),
+            length: 4,
+        },
+    ],
+    states: [
+        Charge: {
+            parts: [
+                core,
+            ],
+            #[special]
+            next: HideThenDie(0.1),
+        },
     ],
 );

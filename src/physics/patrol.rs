@@ -10,34 +10,44 @@ pub trait Patrollable:
 {
 }
 
+#[derive(Component, Debug, Clone, Reflect)]
+pub struct DefaultPatrollable;
+
+impl Patrollable for DefaultPatrollable {}
+
 /// Watches for a TRIGGER_TX (NOTENOTENOTE) in VISION with C
 /// Why? We already go through the logic of duplicating trigger tx for room
 #[derive(Component, Debug, Clone, Reflect)]
-pub struct PatrolWatch<C: Patrollable> {
+pub struct PatrolWatch<C: Patrollable, M: Patrollable = DefaultPatrollable> {
     vision: Bounds,
     _ignore: Option<C>,
+    _more_ignore: Option<M>,
 }
-impl<C: Patrollable> PatrolWatch<C> {
+impl<C: Patrollable, M: Patrollable> PatrolWatch<C, M> {
     pub fn new(vision: Bounds) -> Self {
         Self {
             vision,
             _ignore: None,
+            _more_ignore: None,
         }
     }
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
-pub struct PatrolActive {
+pub struct PatrolActive<M: Patrollable = DefaultPatrollable> {
     pub target_eid: Entity,
     pub time_seen: f32,
+    _ignore: Option<M>,
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
-pub struct PatrolInactive;
+pub struct PatrolInactive<M: Patrollable = DefaultPatrollable> {
+    _ignore: Option<M>,
+}
 
-fn find_all_in_vision<C: Patrollable>(
+fn find_all_in_vision<C: Patrollable, M: Patrollable>(
     target_q: &Query<(Entity, &GlobalTransform, &TriggerTx), With<C>>,
-    watch: &PatrolWatch<C>,
+    watch: &PatrolWatch<C, M>,
     my_pos: Vec2,
     my_angle: f32,
 ) -> Vec<Entity> {
@@ -58,10 +68,10 @@ fn find_all_in_vision<C: Patrollable>(
     result
 }
 
-fn find_all_seen<C: Patrollable>(
+fn find_all_seen<C: Patrollable, M: Patrollable>(
     target_q: &Query<(Entity, &GlobalTransform, &TriggerTx), With<C>>,
     _static_q: &Query<&StaticTx>,
-    watch: &PatrolWatch<C>,
+    watch: &PatrolWatch<C, M>,
     my_pos: Vec2,
     my_angle: f32,
 ) -> Vec<Entity> {
@@ -71,8 +81,8 @@ fn find_all_seen<C: Patrollable>(
     in_vision
 }
 
-fn draw_patrols<C: Patrollable>(
-    patrol_q: Query<(&PatrolWatch<C>, &GlobalTransform)>,
+fn draw_patrols<C: Patrollable, M: Patrollable>(
+    patrol_q: Query<(&PatrolWatch<C, M>, &GlobalTransform)>,
     mut gz: Gizmos,
     meta_state: Res<State<MetaState>>,
 ) {
@@ -92,12 +102,12 @@ fn draw_patrols<C: Patrollable>(
     }
 }
 
-fn update_patrols<C: Patrollable>(
+fn update_patrols<C: Patrollable, M: Patrollable>(
     target_q: Query<(Entity, &GlobalTransform, &TriggerTx), With<C>>,
     static_q: Query<&StaticTx>,
     mut patrol_watch: Query<(
         Entity,
-        &PatrolWatch<C>,
+        &PatrolWatch<C, M>,
         Option<&mut PatrolActive>,
         &GlobalTransform,
     )>,
@@ -108,10 +118,12 @@ fn update_patrols<C: Patrollable>(
         let (my_pos, my_angle) = gtran.pos_n_angle();
         let mut seen_targets = find_all_seen(&target_q, &static_q, watch, my_pos, my_angle);
         if seen_targets.len() == 0 {
-            commands.entity(eid).remove::<PatrolActive>();
-            commands.entity(eid).insert(PatrolInactive);
+            commands.entity(eid).remove::<PatrolActive<M>>();
+            commands
+                .entity(eid)
+                .insert(PatrolInactive::<M> { _ignore: None });
         } else {
-            commands.entity(eid).remove::<PatrolInactive>();
+            commands.entity(eid).remove::<PatrolInactive<M>>();
             match active.as_mut() {
                 Some(old_active) => {
                     if seen_targets.contains(&old_active.target_eid) {
@@ -122,9 +134,10 @@ fn update_patrols<C: Patrollable>(
                     }
                 }
                 None => {
-                    commands.entity(eid).insert(PatrolActive {
+                    commands.entity(eid).insert(PatrolActive::<M> {
                         target_eid: seen_targets.pop().unwrap(),
                         time_seen: 0.0,
+                        _ignore: None,
                     });
                 }
             };
@@ -132,17 +145,19 @@ fn update_patrols<C: Patrollable>(
     }
 }
 
-pub fn register_patrol<C: Patrollable>(app: &mut App) {
-    app.register_type::<PatrolWatch<C>>();
-    app.register_type::<PatrolActive>();
-    app.register_type::<PatrolInactive>();
+pub fn register_patrol<C: Patrollable, M: Patrollable>(app: &mut App) {
+    app.register_type::<PatrolWatch<C, M>>();
+    app.register_type::<PatrolActive<M>>();
+    app.register_type::<PatrolInactive<M>>();
 
     app.add_systems(
         PostUpdate,
-        draw_patrols::<C>.run_if(in_state(ShowPhysicsBounds)),
+        draw_patrols::<C, M>.run_if(in_state(ShowPhysicsBounds)),
     );
     app.add_systems(
         Update,
-        update_patrols::<C>.in_set(PhysicsSet).after(CollisionsSet),
+        update_patrols::<C, M>
+            .in_set(PhysicsSet)
+            .after(CollisionsSet),
     );
 }

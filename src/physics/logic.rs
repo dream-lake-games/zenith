@@ -541,6 +541,24 @@ fn apply_room_wrap(
     }
 }
 
+/// The resource tracking passage of in-game time to drive the BulletUpdate
+#[derive(Resource)]
+struct InGameTimePassed(f32);
+
+fn shephard_bullet_update(
+    // mut time_passed: ResMut<InGameTimePassed>,
+    // bullet_time: Res<BulletTime>,
+    world: &mut World,
+) {
+    let in_game_time = world.resource::<BulletTime>().delta_seconds();
+    let mut time_passed = world.resource_mut::<InGameTimePassed>();
+    time_passed.0 += in_game_time;
+    if time_passed.0 >= 1.0 / FRAMERATE {
+        time_passed.0 -= 1.0 / FRAMERATE;
+        world.run_schedule(BulletUpdate);
+    }
+}
+
 pub(super) fn register_logic(app: &mut App) {
     // Reset collisions during preupdate
     app.add_systems(
@@ -579,5 +597,14 @@ pub(super) fn register_logic(app: &mut App) {
             .in_set(PhysicsSet)
             .after(CollisionsSet)
             .run_if(in_state(MetaStateKind::Room)),
+    );
+    // Stuff for the BulletUpdate schedule
+    app.init_schedule(BulletUpdate);
+    app.insert_resource(InGameTimePassed(0.0));
+    app.add_systems(
+        Update,
+        shephard_bullet_update
+            .in_set(PhysicsSet)
+            .after(CollisionsSet),
     );
 }

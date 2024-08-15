@@ -17,7 +17,7 @@ impl Plugin for AnimationDefnsPlugin {
     fn build(&self, app: &mut App) {
         register_animation_manager::<AnimationShip>(app);
         register_animation_manager::<AnimationStar>(app);
-        register_animation_manager::<AnimationSuicido>(app);
+        register_animation_manager::<AnimationSuicidoBody>(app);
 
         register_texture_manager::<TextureNormalPlanetState>(app);
         register_texture_manager::<TextureTestPlanetState>(app);

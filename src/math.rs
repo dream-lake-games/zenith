@@ -142,6 +142,25 @@ pub fn regular_polygon(num_sides: u32, mut angle: f32, radius: f32) -> Vec<Vec2>
     points
 }
 
+pub fn room_diff(end_pos: Vec2, start_pos: Vec2, wrap_size: Vec2) -> Vec2 {
+    let dist_left = (end_pos.x - start_pos.x).rem_euclid(wrap_size.x);
+    let dist_right = (start_pos.x - end_pos.x).rem_euclid(wrap_size.x);
+    let dist_up = (end_pos.y - start_pos.y).rem_euclid(wrap_size.y);
+    let dist_down = (start_pos.y - end_pos.y).rem_euclid(wrap_size.y);
+    Vec2 {
+        x: if dist_left < dist_right {
+            dist_left
+        } else {
+            -dist_right
+        },
+        y: if dist_up < dist_down {
+            dist_up
+        } else {
+            -dist_down
+        },
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum Spleen {
     EaseInCubic,

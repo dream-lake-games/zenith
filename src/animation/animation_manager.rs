@@ -228,7 +228,12 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
 
 fn play_animations<StateMachine: AnimationStateMachine>(
     mut commands: Commands,
-    mut managers: Query<(Entity, &mut AnimationManager<StateMachine>, Option<&Dying>)>,
+    mut managers: Query<(
+        Entity,
+        &mut AnimationManager<StateMachine>,
+        Option<&Dying>,
+        &mut Visibility,
+    )>,
     mut bodies: Query<(
         &mut AnimationIndex<StateMachine>,
         &Handle<AnimationMaterial>,
@@ -238,7 +243,8 @@ fn play_animations<StateMachine: AnimationStateMachine>(
     bullet_time: Res<BulletTime>,
 ) {
     for (mut index, hand, parent) in &mut bodies {
-        let (manager_eid, mut manager, already_dying) = managers.get_mut(parent.get()).unwrap();
+        let (manager_eid, mut manager, already_dying, mut visibility) =
+            managers.get_mut(parent.get()).unwrap();
         if manager.hidden {
             continue;
         }
@@ -272,6 +278,7 @@ fn play_animations<StateMachine: AnimationStateMachine>(
                 AnimationNextState::HideThenDie(dying_time) => {
                     // Triggering the death process for this entity
                     manager.set_hidden(true);
+                    *visibility = Visibility::Hidden;
                     if !already_dying.is_some() {
                         commands.entity(manager_eid).insert(Dying::new(dying_time));
                     }

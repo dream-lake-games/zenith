@@ -43,22 +43,7 @@ pub fn move_parallaxes(
         .unwrap_or(IDEAL_VEC_f32);
     let cam_pos = cam_tran.translation.truncate();
 
-    let dist_left = (cam_pos.x - cam_marker.first_pos.x).rem_euclid(wrap_size.x);
-    let dist_right = (cam_marker.first_pos.x - cam_pos.x).rem_euclid(wrap_size.x);
-    let dist_up = (cam_pos.y - cam_marker.first_pos.y).rem_euclid(wrap_size.y);
-    let dist_down = (cam_marker.first_pos.y - cam_pos.y).rem_euclid(wrap_size.y);
-    let diff = Vec2 {
-        x: if dist_left < dist_right {
-            dist_left
-        } else {
-            -dist_right
-        },
-        y: if dist_up < dist_down {
-            dist_up
-        } else {
-            -dist_down
-        },
-    };
+    let diff = room_diff(cam_pos, cam_marker.first_pos, wrap_size);
 
     for (parallax, mut tran) in &mut parallax_q {
         tran.translation.x -= diff.x / parallax.distance;

@@ -67,22 +67,7 @@ fn update_follow(
         };
         let target_tran = target_gtran.translation().truncate();
         let my_tran = gtran.translation().truncate();
-        let dist_left = (target_tran.x - my_tran.x).rem_euclid(wrap_size.x);
-        let dist_right = (my_tran.x - target_tran.x).rem_euclid(wrap_size.x);
-        let dist_up = (target_tran.y - my_tran.y).rem_euclid(wrap_size.y);
-        let dist_down = (my_tran.y - target_tran.y).rem_euclid(wrap_size.y);
-        let diff = Vec2 {
-            x: if dist_left < dist_right {
-                dist_left
-            } else {
-                -dist_right
-            },
-            y: if dist_up < dist_down {
-                dist_up
-            } else {
-                -dist_down
-            },
-        };
+        let diff = room_diff(target_tran, my_tran, wrap_size);
         let dist_sq = diff.length_squared();
         // Update the angle if we're supposed to
         if follow.look_at_target {

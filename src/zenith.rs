@@ -44,6 +44,8 @@ pub mod prelude {
     pub use bevy::render::view::*;
     pub use bevy::utils::{HashMap, HashSet};
     pub use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+    pub use core::f32;
+    pub use f32::consts::PI;
     pub use rand::thread_rng;
     pub use rand::Rng;
     pub use std::collections::VecDeque;
