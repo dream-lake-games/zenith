@@ -154,7 +154,7 @@ struct AnimationNextBurden<StateMachine: AnimationStateMachine> {
     next_state: AnimationNextState<StateMachine>,
 }
 
-#[derive(Bundle)]
+#[derive(Bundle, Clone)]
 struct AnimationBodyDataBundle<StateMachine: AnimationStateMachine> {
     name: Name,
     mesh: Mesh2dHandle,
@@ -172,7 +172,7 @@ impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> 
         mats: &mut ResMut<Assets<AnimationMaterial>>,
     ) -> Self {
         let mesh = Mesh::from(Rectangle::new(data.size.x as f32, data.size.y as f32));
-        Self {
+        let result = Self {
             name: Name::new("body_data_bundle"),
             mesh: meshes.add(mesh).into(),
             material: mats.add(AnimationMaterial::new(
@@ -196,21 +196,31 @@ impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> 
                 spf: 1.0 / data.fps,
                 next,
             },
-        }
+        };
+        let cloned_result = result.clone();
+        // Leak the memory
+        // Box::leak(Box::new(cloned_result));
+
+        result
     }
 }
 
 fn handle_manager_changes<StateMachine: AnimationStateMachine>(
     mut commands: Commands,
     managers: Query<
-        (Entity, &AnimationManager<StateMachine>),
+        (Entity, &AnimationManager<StateMachine>, Option<&Children>),
         Changed<AnimationManager<StateMachine>>,
     >,
     ass: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mats: ResMut<Assets<AnimationMaterial>>,
 ) {
-    for (eid, manager) in &managers {
+    for (eid, manager, ochildren) in &managers {
+        if let Some(children) = ochildren {
+            for child in children {
+                commands.entity(*child).insert(Dying::new(0.0));
+            }
+        }
         commands.entity(eid).despawn_descendants();
         let state_data = manager.get_state().to_state_data();
         for (ix, (body, overwrite)) in state_data.overwritten_bodies.into_iter().enumerate() {
