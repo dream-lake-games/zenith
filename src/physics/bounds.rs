@@ -51,10 +51,10 @@ impl Shape {
     /// out of the other. Returns None if they do not overlap. Otherwise, returns two things:
     /// 1. A diff which represents how much to move my placement by to get out of the shape
     /// 2. The exact collision point
-    pub fn bounce_off(
+    fn bounce_off(
         &self,
         placement: (Vec2, f32),
-        rhs: (&Self, Vec2, f32),
+        rhs: ((&Self, &ShapeCache), Vec2, f32),
     ) -> Option<(Vec2, Vec2)> {
         let (my_pos, _my_rot) = placement;
         let (rhs_bounds, rhs_pos, rhs_rot) = rhs;
@@ -64,7 +64,7 @@ impl Shape {
                 radius: my_radius,
             } => {
                 let my_pos = my_pos + *center;
-                let (signed_dist, cp) = rhs_bounds.closest_point((rhs_pos, rhs_rot), my_pos);
+                let (signed_dist, cp) = rhs_bounds.0.closest_point((rhs_pos, rhs_rot), my_pos);
                 // NOTE: This abs is maybe not correct? Maybe it is?
                 // Basically it means we'll only bounce off if we're near the edge.
                 // If we're way inside another bounds, we're fucked, and we'll stay there forever.
@@ -78,7 +78,7 @@ impl Shape {
                 Some((dir * (*my_radius - signed_dist), cp))
             }
             Self::Polygon { points: _my_points } => {
-                unimplemented!("Determining the push point for polygons is not yet supported");
+                unimplemented!("Determining the bounce off for polygons is not yet supported");
             }
         }
     }
@@ -87,30 +87,78 @@ impl Shape {
     /// Returns None if they do not overlap. Otherwise, returns two things:
     /// 1. A diff which represents how much to move my placement by to get out of the shape
     /// 2. The exact collision point
-    pub fn do_overlap(
+    fn overlaps_with(
         &self,
+        cache: &ShapeCache,
         placement: (Vec2, f32),
-        rhs: (&Self, Vec2, f32),
-    ) -> Option<(Vec2, Vec2)> {
-        let (my_pos, _my_rot) = placement;
-        let (rhs_bounds, rhs_pos, rhs_rot) = rhs;
-        match self {
-            Self::Circle {
-                center,
-                radius: my_radius,
-            } => {
-                let my_pos = my_pos + *center;
-                let (signed_dist, cp) = rhs_bounds.closest_point((rhs_pos, rhs_rot), my_pos);
-                // NOTE: This causes bugs. There's some weird stuff happening here with like edges extending down.
-                // write a better triangle overlapper at some point PLEASE
-                if signed_dist > *my_radius {
-                    return None;
-                }
-                let dir = (my_pos - cp).normalize_or_zero();
-                Some((dir * (*my_radius - signed_dist), cp))
+        rhs: ((&Self, &ShapeCache), Vec2, f32),
+    ) -> bool {
+        match (self, rhs.0 .0) {
+            (
+                Self::Circle {
+                    center: my_center,
+                    radius: my_radius,
+                },
+                Self::Circle {
+                    center: other_center,
+                    radius: other_radius,
+                },
+            ) => {
+                return (*my_center + placement.0).distance(*other_center + rhs.1)
+                    < my_radius + other_radius
             }
-            Self::Polygon { points: _my_points } => {
-                unimplemented!("Determining the push point for polygons is not yet supported");
+            (Self::Circle { center, radius }, Self::Polygon { .. }) => {
+                let ShapeCache::Polygon { triangulation } = rhs.0 .1 else {
+                    panic!("Shape cache doesn't match shape 0 in overlaps_with");
+                };
+                for triangle in triangulation {
+                    let triangle = triangle.clone().my_rotated(rhs.2).shifted(rhs.1);
+                    if triangle.signed_distance_to_point(*center + placement.0) < *radius {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            (Self::Polygon { .. }, Self::Circle { center, radius }) => {
+                let ShapeCache::Polygon { triangulation } = cache else {
+                    panic!("Shape cache doesn't match shape 1 in overlaps_with");
+                };
+                for triangle in triangulation {
+                    let triangle = triangle
+                        .clone()
+                        .my_rotated(placement.1)
+                        .shifted(placement.0);
+                    if triangle.signed_distance_to_point(*center + rhs.1) < *radius {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            (Self::Polygon { .. }, Self::Polygon { .. }) => {
+                let ShapeCache::Polygon { triangulation: t1 } = cache else {
+                    panic!("Shape cache doesn't match shape 2 in overlaps_with");
+                };
+                let ShapeCache::Polygon { triangulation: t2 } = rhs.0 .1 else {
+                    panic!("Shape cache doesn't match shape 3 in overlaps_with");
+                };
+                let t1 = t1
+                    .iter()
+                    .map(|t| t.clone().my_rotated(placement.1))
+                    .map(|t| t.shifted(placement.0))
+                    .collect::<Vec<_>>();
+                let t2 = t2
+                    .iter()
+                    .map(|t| t.clone().my_rotated(rhs.2))
+                    .map(|t| t.shifted(rhs.1))
+                    .collect::<Vec<_>>();
+                for ta in t1.iter() {
+                    for tb in t2.iter() {
+                        if are_triangles_colliding(ta, tb) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
             }
         }
     }
@@ -141,28 +189,54 @@ impl Shape {
         }
     }
 }
+
+/// Data about a shape that helps with collision detection
+/// Calculated once when the shape is created.
+#[derive(Debug, Clone, Reflect)]
+enum ShapeCache {
+    Circle,
+    Polygon { triangulation: Vec<Triangle> },
+}
+impl ShapeCache {
+    fn from_shape(shape: &Shape) -> Self {
+        match shape {
+            Shape::Circle { .. } => Self::Circle,
+            Shape::Polygon { points } => Self::Polygon {
+                triangulation: triangulate(points),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Reflect)]
 pub struct Bounds {
-    shapes: Vec<Shape>,
-    // TODO IF NEEDED: Add additional info (like a bounding circle, max/min x/y) to speed up collision detection
+    shapes_n_caches: Vec<(Shape, ShapeCache)>,
 }
 impl Bounds {
     pub fn from_shape(shape: Shape) -> Self {
+        let cache = ShapeCache::from_shape(&shape);
         Self {
-            shapes: vec![shape],
+            shapes_n_caches: vec![(shape, cache)],
         }
     }
 
     pub fn from_shapes(shapes: Vec<Shape>) -> Self {
-        Self { shapes }
+        let shapes_n_caches = shapes
+            .into_iter()
+            .map(|s| {
+                let cache = ShapeCache::from_shape(&s);
+                (s, cache)
+            })
+            .collect();
+        Self { shapes_n_caches }
     }
 
-    pub fn get_shapes(&self) -> &[Shape] {
-        &self.shapes
+    fn get_shapes_n_caches(&self) -> &[(Shape, ShapeCache)] {
+        &self.shapes_n_caches
     }
 
     pub fn draw(&self, pos: Vec2, rot: f32, gz: &mut Gizmos, color: Color) {
-        for shape in self.get_shapes() {
+        for (shape, _) in self.get_shapes_n_caches() {
             // First draw the shape
             match shape {
                 Shape::Circle { center, radius } => {
@@ -186,10 +260,12 @@ impl Bounds {
         other_thing: (&Self, Vec2, f32),
     ) -> Option<(Vec2, Vec2)> {
         let (other_bounds, other_tran, other_angle) = other_thing;
-        for my_shape in &self.shapes {
-            for other_shape in other_bounds.get_shapes() {
-                let bounce =
-                    my_shape.bounce_off(my_tran_n_angle, (other_shape, other_tran, other_angle));
+        for (my_shape, _my_cache) in &self.shapes_n_caches {
+            for (other_shape, other_cache) in other_bounds.get_shapes_n_caches() {
+                let bounce = my_shape.bounce_off(
+                    my_tran_n_angle,
+                    ((other_shape, other_cache), other_tran, other_angle),
+                );
                 if bounce.is_some() {
                     return bounce;
                 }
@@ -198,21 +274,23 @@ impl Bounds {
         None
     }
 
-    pub fn overlap_out(
+    pub fn overlaps_with(
         &self,
         my_tran_n_angle: (Vec2, f32),
         other_thing: (&Self, Vec2, f32),
-    ) -> Option<(Vec2, Vec2)> {
+    ) -> bool {
         let (other_bounds, other_tran, other_angle) = other_thing;
-        for my_shape in &self.shapes {
-            for other_shape in other_bounds.get_shapes() {
-                let bounce =
-                    my_shape.do_overlap(my_tran_n_angle, (other_shape, other_tran, other_angle));
-                if bounce.is_some() {
-                    return bounce;
+        for (my_shape, my_cache) in &self.shapes_n_caches {
+            for (other_shape, other_cache) in other_bounds.get_shapes_n_caches() {
+                if my_shape.overlaps_with(
+                    my_cache,
+                    my_tran_n_angle,
+                    ((other_shape, other_cache), other_tran, other_angle),
+                ) {
+                    return true;
                 }
             }
         }
-        None
+        false
     }
 }

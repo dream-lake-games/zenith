@@ -102,6 +102,16 @@ pub fn simple_rect(width: f32, height: f32) -> Vec<Vec2> {
     ]
 }
 
+/// Like simple_rect but allows you to specify an offset as well
+pub fn simple_rect_offset(width: f32, height: f32, offset: Vec2) -> Vec<Vec2> {
+    vec![
+        Vec2::new(-width / 2.0, -height / 2.0) + offset,
+        Vec2::new(-width / 2.0, height / 2.0) + offset,
+        Vec2::new(width / 2.0, height / 2.0) + offset,
+        Vec2::new(width / 2.0, -height / 2.0) + offset,
+    ]
+}
+
 /// Given a list of points, return points that retain the same shape, but produce an outline
 pub fn outline_points(points: &[Vec2], width: f32) -> Vec<Vec2> {
     let mut new_points = vec![];
@@ -159,6 +169,118 @@ pub fn room_diff(end_pos: Vec2, start_pos: Vec2, wrap_size: Vec2) -> Vec2 {
             -dist_down
         },
     }
+}
+
+/// Convenient to have around for triangulation in collision detection
+#[derive(Debug, Clone, Reflect)]
+pub struct Triangle {
+    pub a: Vec2,
+    pub b: Vec2,
+    pub c: Vec2,
+}
+impl Triangle {
+    pub fn new(a: Vec2, b: Vec2, c: Vec2) -> Self {
+        Self { a, b, c }
+    }
+
+    pub fn my_rotated(self, angle: f32) -> Self {
+        Self::new(
+            self.a.my_rotate(angle),
+            self.b.my_rotate(angle),
+            self.c.my_rotate(angle),
+        )
+    }
+
+    pub fn shifted(self, vec: Vec2) -> Self {
+        Self::new(self.a + vec, self.b + vec, self.c + vec)
+    }
+
+    pub fn signed_distance_to_point(&self, point: Vec2) -> f32 {
+        let (signed_dist_a, _) = signed_distance_to_segment(point, [self.a, self.b]);
+        let (signed_dist_b, _) = signed_distance_to_segment(point, [self.b, self.c]);
+        let (signed_dist_c, _) = signed_distance_to_segment(point, [self.c, self.a]);
+        // Because triangles may be produced from earcutr (no insight into clockwise/not) we have to test inside by signum
+        let inside = signed_dist_a.signum() == signed_dist_b.signum()
+            && signed_dist_a.signum() == signed_dist_c.signum();
+        if inside {
+            -(signed_dist_a
+                .abs()
+                .max(signed_dist_b.abs())
+                .max(signed_dist_c.abs()))
+        } else {
+            signed_dist_a
+                .abs()
+                .max(signed_dist_b.abs())
+                .max(signed_dist_c.abs())
+        }
+    }
+
+    pub fn get_trips(&self) -> Vec<(Vec2, Vec2, Vec2)> {
+        vec![
+            (self.a, self.b, self.c),
+            (self.b, self.c, self.a),
+            (self.c, self.a, self.b),
+        ]
+    }
+
+    pub fn get_points(&self) -> Vec<Vec2> {
+        vec![self.a, self.b, self.c]
+    }
+}
+
+/// Determine if two triangles are colliding by searching for a counterexample
+pub fn are_triangles_colliding(tri1: &Triangle, tri2: &Triangle) -> bool {
+    let pairs = vec![(tri1, tri2), (tri2, tri1)];
+    for (t1, t2) in pairs {
+        for (a, b, c) in t1.get_trips() {
+            // Cross product +/- signals side of the edge b - a
+            let mut sum: f32 = 0.0;
+            let edge = b - a;
+            for point in t2.get_points() {
+                let diff = point - a;
+                let cross = edge.x * diff.y - edge.y * diff.x;
+                if cross > 0.0 {
+                    sum += 1.0;
+                }
+                if cross < 0.0 {
+                    sum -= 1.0;
+                }
+            }
+            if sum.abs() < 2.9 {
+                // Not all points of the second triangle are on the same side,
+                // thus this triangle is not a counter example
+                continue;
+            }
+            // All three points of the second triangle are on the same side of this edge
+            // Need to check the third point of the first triangle
+            let diff = c - a;
+            let cross = edge.x * diff.y - edge.y * diff.x;
+            if cross * sum < 0.0 {
+                // Signs of crosses disagree, meaning this edge separates the points
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Produce a triangulation of points
+pub fn triangulate(points: &[Vec2]) -> Vec<Triangle> {
+    if points.len() <= 2 {
+        panic!("Tried to triangulate a degenerate polygon");
+    }
+    let mut earcut_form = vec![];
+    for point in points {
+        earcut_form.push(point.x);
+        earcut_form.push(point.y);
+    }
+    let ear_tris = earcutr::earcut(&earcut_form, &[], 2).unwrap();
+    let mut iter = ear_tris.iter();
+    let mut result = vec![];
+    while let (Some(ax), Some(bx), Some(cx)) = (iter.next(), iter.next(), iter.next()) {
+        result.push(Triangle::new(points[*ax], points[*bx], points[*cx]));
+    }
+    result
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]

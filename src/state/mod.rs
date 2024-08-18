@@ -30,6 +30,14 @@ pub enum MetaState {
     Room(RoomState),
     Transition,
 }
+impl MetaState {
+    pub fn wrap_size(&self) -> Vec2 {
+        self.get_room_state()
+            .map(|r| r.room_size)
+            .unwrap_or(IDEAL_VEC)
+            .as_vec2()
+    }
+}
 
 /// Kills some verbosity with reading meta states
 pub trait MetaUnfucker {

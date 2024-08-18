@@ -38,7 +38,7 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
 fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
     let room_state = RoomState::xth_encounter(EncounterKind::SimpOnly, 1);
 
-    let ship_id = commands.spawn(ShipBundle::new(default(), &room_state)).id();
+    let _ship_id = commands.spawn(ShipBundle::new(default(), &room_state)).id();
 
     commands.spawn(PlanetBundle::new(
         "wrap1",

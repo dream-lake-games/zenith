@@ -18,6 +18,7 @@ impl Plugin for AnimationDefnsPlugin {
         register_animation_manager::<AnimationShip>(app);
         register_animation_manager::<AnimationStar>(app);
         register_animation_manager::<AnimationSuicidoBody>(app);
+        register_animation_manager::<AnimationSuicidoExplosionCircle>(app);
 
         register_texture_manager::<TextureNormalPlanetState>(app);
         register_texture_manager::<TextureTestPlanetState>(app);

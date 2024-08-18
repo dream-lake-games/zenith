@@ -31,7 +31,21 @@ pub(super) struct AnimationBodyDataOverrides {
     pub(super) override_color: Option<Color>,
 }
 
-pub trait AnimationBody {
+pub trait AnimationBody:
+    Sized
+    + Copy
+    + Send
+    + Sync
+    + 'static
+    + std::fmt::Debug
+    + PartialEq
+    + Eq
+    + Reflect
+    + FromReflect
+    + TypePath
+    + GetTypeRegistration
+    + std::hash::Hash
+{
     fn to_body_data(&self) -> AnimationBodyData;
 }
 
@@ -136,9 +150,20 @@ impl<'w, StateMachine: AnimationStateMachine> MutableAnimationManagerActions<Sta
     impl_mutable_animation_manager_field!(flip_y, bool);
 }
 
+#[derive(Debug, Clone, Component, Reflect)]
+pub struct AnimationBodyProgress<StateMachine: AnimationStateMachine> {
+    pub(super) ixes: HashMap<StateMachine::BodyType, u32>,
+}
+impl<StateMachine: AnimationStateMachine> AnimationBodyProgress<StateMachine> {
+    pub fn get_body_ix(&self, body_type: StateMachine::BodyType) -> Option<u32> {
+        self.ixes.get(&body_type).map(|thing| *thing)
+    }
+}
+
 /// For tracking animations that play
 #[derive(Component, Debug, Clone, Reflect)]
 struct AnimationIndex<StateMachine: AnimationStateMachine> {
+    body_type: StateMachine::BodyType,
     ix: u32,
     length: u32,
     time: f32,
@@ -165,6 +190,7 @@ struct AnimationBodyDataBundle<StateMachine: AnimationStateMachine> {
 }
 impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> {
     fn new(
+        body_type: StateMachine::BodyType,
         data: AnimationBodyData,
         next: AnimationNextState<StateMachine>,
         ass: &Res<AssetServer>,
@@ -172,7 +198,7 @@ impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> 
         mats: &mut ResMut<Assets<AnimationMaterial>>,
     ) -> Self {
         let mesh = Mesh::from(Rectangle::new(data.size.x as f32, data.size.y as f32));
-        let result = Self {
+        Self {
             name: Name::new("body_data_bundle"),
             mesh: meshes.add(mesh).into(),
             material: mats.add(AnimationMaterial::new(
@@ -190,18 +216,14 @@ impl<StateMachine: AnimationStateMachine> AnimationBodyDataBundle<StateMachine> 
             }),
             render_layers: data.render_layers,
             index: AnimationIndex {
+                body_type,
                 ix: 0,
                 length: data.length,
                 time: 0.0,
                 spf: 1.0 / data.fps,
                 next,
             },
-        };
-        let cloned_result = result.clone();
-        // Leak the memory
-        // Box::leak(Box::new(cloned_result));
-
-        result
+        }
     }
 }
 
@@ -222,17 +244,25 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
             }
         }
         commands.entity(eid).despawn_descendants();
+        let mut new_progress_map = HashMap::new();
         let state_data = manager.get_state().to_state_data();
         for (ix, (body, overwrite)) in state_data.overwritten_bodies.into_iter().enumerate() {
+            new_progress_map.insert(body, 0);
             let data = body.to_body_data().with_overrides(overwrite);
             let next = if ix == 0 {
                 state_data.next.clone()
             } else {
                 AnimationNextState::None
             };
-            let body_bund = AnimationBodyDataBundle::new(data, next, &ass, &mut meshes, &mut mats);
+            let body_bund =
+                AnimationBodyDataBundle::new(body, data, next, &ass, &mut meshes, &mut mats);
             commands.spawn(body_bund).set_parent(eid);
         }
+        commands
+            .entity(eid)
+            .insert(AnimationBodyProgress::<StateMachine> {
+                ixes: new_progress_map,
+            });
     }
 }
 
@@ -241,6 +271,7 @@ fn play_animations<StateMachine: AnimationStateMachine>(
     mut managers: Query<(
         Entity,
         &mut AnimationManager<StateMachine>,
+        &mut AnimationBodyProgress<StateMachine>,
         Option<&Dying>,
         &mut Visibility,
     )>,
@@ -253,7 +284,7 @@ fn play_animations<StateMachine: AnimationStateMachine>(
     bullet_time: Res<BulletTime>,
 ) {
     for (mut index, hand, parent) in &mut bodies {
-        let (manager_eid, mut manager, already_dying, mut visibility) =
+        let (manager_eid, mut manager, mut progress, already_dying, mut visibility) =
             managers.get_mut(parent.get()).unwrap();
         if manager.hidden {
             continue;
@@ -295,13 +326,15 @@ fn play_animations<StateMachine: AnimationStateMachine>(
                 }
             }
         }
+        // Update the ix in the manager so it can be read
+        progress.ixes.insert(index.body_type, index.ix);
     }
 }
 
 pub(super) fn register_animation_manager<StateMachine: AnimationStateMachine>(app: &mut App) {
     app.register_type::<AnimationManager<StateMachine>>();
     app.add_systems(
-        PostUpdate,
+        FixedPostUpdate,
         handle_manager_changes::<StateMachine>
             .in_set(AnimationSet)
             .in_set(ManagersSet),
@@ -314,7 +347,7 @@ pub(super) fn register_animation_manager<StateMachine: AnimationStateMachine>(ap
             .after(PhysicsSet),
     );
     app.add_systems(
-        PostUpdate,
+        FixedPostUpdate,
         spawn_animation_manager_mirages::<StateMachine>
             .in_set(AnimationSet)
             .in_set(MirageSet)

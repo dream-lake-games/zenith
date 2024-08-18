@@ -291,17 +291,16 @@ fn resolve_trigger_collisions(
         let my_tran_n_angle = gtran.pos_n_angle();
         let (_, other_gtran) = shared_data.get(other_eid).unwrap();
         let rhs_tran_n_angle = other_gtran.pos_n_angle();
-        let Some((_, cp)) = rx.bounds.overlap_out(
+        if !rx.bounds.overlaps_with(
             my_tran_n_angle,
             (&other_tx.bounds, rhs_tran_n_angle.0, rhs_tran_n_angle.1),
-        ) else {
+        ) {
             // These things don't overlap, nothing to do
             continue;
         };
         // Create collision records (NOTE: It's symmetric, one for each, and we don't dup)
         if !dup_set.contains(&(eid, other_eid)) {
             let my_collision_record = TriggerCollisionRecord {
-                pos: cp,
                 my_role: TriggerCollisionRole::Rx,
                 rx_eid: eid,
                 rx_kind: rx.kind.clone(),
@@ -314,7 +313,6 @@ fn resolve_trigger_collisions(
                 .id();
             rx.collisions.push_back(my_collision_eid);
             let other_collision_record = TriggerCollisionRecord {
-                pos: cp,
                 my_role: TriggerCollisionRole::Tx,
                 rx_eid: eid,
                 rx_kind: rx.kind.clone(),

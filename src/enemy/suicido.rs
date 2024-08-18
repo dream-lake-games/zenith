@@ -8,16 +8,22 @@ struct SuicidoConstants {
     wander_launch_speed: f32,
     engaged_launch_speed: f32,
     max_launch_time: f32,
+    explode_vision_box: Vec2,
+    prefer_fut: f32,
+    moving_away_mult: f32,
 }
 impl Default for SuicidoConstants {
     fn default() -> Self {
         Self {
-            rot_speed: PI * 1.5,
+            rot_speed: PI * 2.0,
             charge_drag: 0.95,
-            charge_time: 1.0,
-            wander_launch_speed: 30.0,
-            engaged_launch_speed: 80.0,
+            charge_time: 0.5,
+            wander_launch_speed: 50.0,
+            engaged_launch_speed: 90.0,
             max_launch_time: 2.0,
+            explode_vision_box: Vec2::new(36.0, 30.0),
+            prefer_fut: 0.5,
+            moving_away_mult: 3.0,
         }
     }
 }
@@ -51,7 +57,9 @@ struct Launching {
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
-struct Exploding {}
+struct Exploding {
+    has_spawned_circle: bool,
+}
 
 #[derive(Debug, Clone, Reflect, Component)]
 struct Suicido;
@@ -75,7 +83,6 @@ pub struct SuicidoBundle {
     animation: AnimationManager<AnimationSuicidoBody>,
     mirage: MirageAnimationManager,
     engage: PatrolWatch<Ship, EngageVision>,
-    explode: PatrolWatch<Ship, ExplodeVision>,
     charging: Charging,
 }
 impl SuicidoBundle {
@@ -99,16 +106,34 @@ impl SuicidoBundle {
                 center: Vec2::ZERO,
                 radius: 100.0,
             })),
-            explode: PatrolWatch::new(Bounds::from_shape(Shape::Circle {
-                center: Vec2::ZERO,
-                radius: 20.0,
-            })),
             charging: Charging::default(),
         }
     }
 }
 
 fn debug_suicidos() {}
+
+/// So we don't have to specify the explode vision on spawn (and leak visibility of constants)
+/// do it here
+fn attach_explode_vision(
+    mut commands: Commands,
+    relevant: Query<Entity, (With<Suicido>, Without<PatrolWatch<Ship, ExplodeVision>>)>,
+    constants: Res<SuicidoConstants>,
+) {
+    for eid in &relevant {
+        commands
+            .entity(eid)
+            .insert(PatrolWatch::<Ship, ExplodeVision>::new(Bounds::from_shape(
+                Shape::Polygon {
+                    points: simple_rect_offset(
+                        constants.explode_vision_box.x,
+                        constants.explode_vision_box.y,
+                        Vec2::new(constants.explode_vision_box.x / 2.0, 0.0),
+                    ),
+                },
+            )));
+    }
+}
 
 /// Slows down suicidos which are charging
 /// NOTE: Needs to be separate from update because it runs on diff schedule
@@ -135,7 +160,7 @@ fn update_charging_suicidos(
         ),
         With<Suicido>,
     >,
-    ship_poses: Query<&GlobalTransform, With<Ship>>,
+    ship_poses: Query<(&GlobalTransform, &DynoTran), (With<Ship>, Without<Suicido>)>,
     constants: Res<SuicidoConstants>,
     bullet_time: Res<BulletTime>,
     meta_state: Res<State<MetaState>>,
@@ -166,8 +191,9 @@ fn update_charging_suicidos(
         let (ang_diff, dist_to_goal_sq) = match charging.goal {
             ChargeGoal::Angle { speed } => (speed, None),
             ChargeGoal::Entity { eid: goal_eid } => {
-                let goal_pos = ship_poses.get(goal_eid).unwrap();
-                let (goal_pos, _) = goal_pos.pos_n_angle();
+                let (goal_pos, goal_dyno) = ship_poses.get(goal_eid).unwrap();
+                let (mut goal_pos, _) = goal_pos.pos_n_angle();
+                goal_pos += constants.prefer_fut * goal_dyno.vel;
                 let diff = room_diff(goal_pos, my_pos, wrap_size);
                 let goal_ang = diff.to_angle();
                 (
@@ -208,6 +234,7 @@ fn update_launching_suicidos(
             &mut Launching,
             &GlobalTransform,
             Option<&PatrolActive<EngageVision>>,
+            Option<&PatrolActive<ExplodeVision>>,
         ),
         With<Suicido>,
     >,
@@ -216,12 +243,14 @@ fn update_launching_suicidos(
     bullet_time: Res<BulletTime>,
     meta_state: Res<State<MetaState>>,
 ) {
-    let wrap_size = meta_state
-        .get_room_state()
-        .map(|r| r.room_size)
-        .unwrap_or(IDEAL_VEC)
-        .as_vec2();
-    for (eid, mut launching, gtran, engaged) in &mut suicidos {
+    let wrap_size = meta_state.wrap_size();
+    for (eid, mut launching, gtran, engaged, explode_range) in &mut suicidos {
+        if explode_range.is_some() {
+            commands.entity(eid).insert(Exploding {
+                has_spawned_circle: false,
+            });
+            continue;
+        }
         let (my_pos, _) = gtran.pos_n_angle();
         // Update distance to goal
         let new_dist_to_goal_sq = match engaged {
@@ -248,9 +277,14 @@ fn update_launching_suicidos(
         };
         launching.dist_to_goal_sq = new_dist_to_goal_sq;
         // Update timing
-        launching.time += bullet_time.delta_seconds();
+        let time_mult = if moving_away.is_some() {
+            constants.moving_away_mult
+        } else {
+            1.0
+        };
+        launching.time += time_mult * bullet_time.delta_seconds();
         // Charge if we're moving away OR out of time
-        if moving_away.is_some() || launching.time > constants.max_launch_time {
+        if launching.time > constants.max_launch_time {
             let goal = match engaged {
                 Some(active) => ChargeGoal::Entity {
                     eid: active.target_eid,
@@ -268,31 +302,92 @@ fn update_launching_suicidos(
     }
 }
 
+fn update_exploding_suicidos(
+    mut commands: Commands,
+    mut suicidos: Query<
+        (
+            Entity,
+            &mut Exploding,
+            &GlobalTransform,
+            &DynoTran,
+            &AnimationManager<AnimationSuicidoBody>,
+            &AnimationBodyProgress<AnimationSuicidoBody>,
+        ),
+        With<Suicido>,
+    >,
+    meta_state: Res<State<MetaState>>,
+) {
+    for (eid, mut exploding, gtran, dyno_tran, animation_state, animation_progress) in &mut suicidos
+    {
+        // Spawn the explosion circle
+        commands
+            .entity(eid)
+            .remove::<PatrolWatch<Ship, EngageVision>>();
+        commands
+            .entity(eid)
+            .remove::<PatrolWatch<Ship, ExplodeVision>>();
+        commands.entity(eid).remove::<Charging>();
+        commands.entity(eid).remove::<Launching>();
+        if !exploding.has_spawned_circle {
+            if animation_state.get_state() == AnimationSuicidoBody::Explode
+                && animation_progress.get_body_ix(AnimationBody_AnimationSuicidoBody::explode)
+                    == Some(3)
+            {
+                exploding.has_spawned_circle = true;
+                commands.spawn(ExplosionCircleBundle::new(
+                    gtran.pos_n_angle().0,
+                    dyno_tran,
+                    &meta_state.get_room_state().unwrap(),
+                ));
+            }
+        }
+    }
+}
+
 fn update_suicido_animations(
     mut suicidos: Query<(
         &mut AnimationManager<AnimationSuicidoBody>,
         Option<&Charging>,
         Option<&Launching>,
+        Option<&Exploding>,
     )>,
 ) {
-    for (mut manager, charging, launching) in &mut suicidos {
-        match (charging, launching) {
-            (Some(_), None) => manager.set_state(AnimationSuicidoBody::Charge),
-            (None, Some(_)) => manager.set_state(AnimationSuicidoBody::Launch),
+    for (mut manager, charging, launching, exploding) in &mut suicidos {
+        match (charging, launching, exploding) {
+            (Some(_), None, None) => manager.set_state(AnimationSuicidoBody::Charge),
+            (None, Some(_), None) => manager.set_state(AnimationSuicidoBody::Launch),
+            (None, None, Some(_)) => manager.set_state(AnimationSuicidoBody::Explode),
             _ => manager.set_state(AnimationSuicidoBody::Charge),
         }
     }
 }
 
-// fn do_suicide(
-//     mut commands: Commands,
-//     mut suicidos: Query<(Entity, &mut AnimationManager<AnimationSuicidoBody>), Added<PatrolActive>>,
-// ) {
-//     for (eid, mut manager) in &mut suicidos {
-//         commands.entity(eid).remove::<Follow>();
-//         manager.reset_state(AnimationSuicidoBody::Explode);
-//     }
-// }
+#[derive(Component, Debug, Clone, Reflect)]
+struct ExplosionCircle;
+
+#[derive(Bundle)]
+struct ExplosionCircleBundle {
+    name: Name,
+    explosion_circle: ExplosionCircle,
+    spatial: SpatialBundle,
+    dyno_tran: DynoTran,
+    wrap: RoomWrap,
+    animation: AnimationManager<AnimationSuicidoExplosionCircle>,
+    mirage: MirageAnimationManager,
+}
+impl ExplosionCircleBundle {
+    fn new(pos: Vec2, dyno_tran: &DynoTran, room_state: &RoomState) -> Self {
+        Self {
+            name: Name::new("explosion_circle"),
+            explosion_circle: ExplosionCircle,
+            spatial: spat_tran!(pos.x, pos.y, ZIX_ENEMY),
+            dyno_tran: dyno_tran.clone(),
+            wrap: RoomWrap,
+            animation: AnimationManager::new(),
+            mirage: MirageAnimationManager::room_offsets(room_state),
+        }
+    }
+}
 
 pub(super) fn register_suicidos(app: &mut App) {
     app.register_type::<Suicido>();
@@ -300,8 +395,10 @@ pub(super) fn register_suicidos(app: &mut App) {
         Update,
         (
             debug_suicidos,
+            attach_explode_vision,
             update_charging_suicidos,
             update_launching_suicidos,
+            update_exploding_suicidos,
             update_suicido_animations,
         )
             .after(PhysicsSet),

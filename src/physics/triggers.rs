@@ -65,7 +65,6 @@ pub enum TriggerCollisionRole {
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct TriggerCollisionRecord {
-    pub pos: Vec2,
     pub my_role: TriggerCollisionRole,
     pub tx_eid: Entity,
     pub tx_kind: TriggerKind,

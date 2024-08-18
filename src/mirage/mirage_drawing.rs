@@ -56,7 +56,7 @@ pub fn spawn_animation_manager_mirages<StateMachine: AnimationStateMachine>(
     )>,
     root: Res<MirageRoot>,
 ) {
-    for (manager_eid, children, mirage) in &managers {
+    for (_manager_eid, children, mirage) in &managers {
         for (ix, child) in children.iter().enumerate() {
             let (ditto_eid, mesh, mat, render_layers) = ditto_q.get(*child).unwrap();
             for (jx, offset) in mirage.offsets.iter().enumerate() {
@@ -92,7 +92,7 @@ pub fn spawn_texture_manager_mirages<StateMachine: TextureStateMachine>(
     )>,
     root: Res<MirageRoot>,
 ) {
-    for (manager_eid, mirage, children) in &managers {
+    for (_manager_eid, mirage, children) in &managers {
         for (ix, child) in children.iter().enumerate() {
             let (ditto_eid, mesh, mat, render_layers) = ditto_q.get(*child).unwrap();
             for (jx, offset) in mirage.offsets.iter().enumerate() {

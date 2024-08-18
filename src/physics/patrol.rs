@@ -54,14 +54,10 @@ fn find_all_in_vision<C: Patrollable, M: Patrollable>(
     let mut result = vec![];
     for (eid, gtran, trigger_tx) in target_q {
         let (other_pos, other_ang) = gtran.pos_n_angle();
-        if watch
-            .vision
-            .overlap_out(
-                (my_pos, my_angle),
-                (&trigger_tx.bounds, other_pos, other_ang),
-            )
-            .is_some()
-        {
+        if watch.vision.overlaps_with(
+            (my_pos, my_angle),
+            (&trigger_tx.bounds, other_pos, other_ang),
+        ) {
             result.push(eid);
         }
     }
