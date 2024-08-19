@@ -70,6 +70,7 @@ pub fn launch_app(mut app: App) {
     app.add_plugins(particles::ParticlesPlugin);
     app.add_plugins(physics::PhysicsPlugin);
     app.add_plugins(roots::RootPlugin);
+    app.add_plugins(ship::ShipPlugin);
     app.add_plugins(state::StatePlugin);
     app.run();
 }

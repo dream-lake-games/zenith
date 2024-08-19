@@ -15,7 +15,9 @@ pub use suicido_animation::*;
 pub(super) struct AnimationDefnsPlugin;
 impl Plugin for AnimationDefnsPlugin {
     fn build(&self, app: &mut App) {
-        register_animation_manager::<AnimationShip>(app);
+        register_animation_manager::<AnimationShipBody>(app);
+        register_animation_manager::<AnimationShipGun>(app);
+        register_animation_manager::<AnimationShipTail>(app);
         register_animation_manager::<AnimationStar>(app);
         register_animation_manager::<AnimationSuicidoBody>(app);
         register_animation_manager::<AnimationSuicidoExplosionCircle>(app);

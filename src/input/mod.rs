@@ -34,6 +34,10 @@ impl DragInput {
     }
 }
 
+/// An event that forces the launch to terminate
+#[derive(Event)]
+pub struct ForceLaunch;
+
 /// Event that corresponds to input that _should_ send the ship flying.
 /// NOTE: It is the responsibility of other systems to monitor the ship resources,
 /// i.e. determine if it actually CAN go flying rn
@@ -71,6 +75,7 @@ impl Plugin for CommonInputPlugin {
         });
 
         // Events
+        app.add_event::<ForceLaunch>();
         app.add_event::<Launch>();
         app.add_event::<Fire>();
         app.add_event::<ConvoGoNext>();

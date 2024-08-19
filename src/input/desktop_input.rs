@@ -10,12 +10,14 @@ fn update_drag_input(
     mut launch_writer: EventWriter<Launch>,
     mut fire_writer: EventWriter<Fire>,
     ideal_mult: Res<IdealMult>,
+    mut force_launches: EventReader<ForceLaunch>,
 ) {
     let window = q_windows.single();
     let Some(mouse_pos) = window.cursor_position() else {
         // Mouse is not in the window, don't do anything
         return;
     };
+    let should_force_launch = force_launches.read().last().is_some();
     // TODO: Once we have a camera, screen/world pos calc needs to change
     let screen_pos = Vec2::new(
         mouse_pos.x - IDEAL_WIDTH_f32 * ideal_mult.0 / 2.0,
@@ -23,11 +25,14 @@ fn update_drag_input(
     ) / ideal_mult.0;
     let world_pos = screen_pos;
     let left_drag_start = if buttons.just_pressed(MouseButton::Left) {
-        Some(world_pos)
+        Some(screen_pos)
     } else {
         if let Some(drag_start) = state.left_drag_start {
-            if !buttons.pressed(MouseButton::Left) || buttons.just_released(MouseButton::Left) {
-                launch_writer.send(Launch(drag_start - world_pos));
+            if !buttons.pressed(MouseButton::Left)
+                || buttons.just_released(MouseButton::Left)
+                || should_force_launch
+            {
+                launch_writer.send(Launch(drag_start - screen_pos));
                 None
             } else {
                 Some(drag_start)
@@ -37,11 +42,11 @@ fn update_drag_input(
         }
     };
     let right_drag_start = if buttons.just_pressed(MouseButton::Right) {
-        Some(world_pos)
+        Some(screen_pos)
     } else {
         if let Some(drag_start) = state.right_drag_start {
             if !buttons.pressed(MouseButton::Right) || buttons.just_released(MouseButton::Right) {
-                fire_writer.send(Fire(drag_start - world_pos));
+                fire_writer.send(Fire(drag_start - screen_pos));
                 None
             } else {
                 Some(drag_start)

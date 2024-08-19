@@ -233,6 +233,7 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
         (Entity, &AnimationManager<StateMachine>, Option<&Children>),
         Changed<AnimationManager<StateMachine>>,
     >,
+    relevant_children: Query<Entity, With<AnimationIndex<StateMachine>>>,
     ass: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mats: ResMut<Assets<AnimationMaterial>>,
@@ -240,10 +241,11 @@ fn handle_manager_changes<StateMachine: AnimationStateMachine>(
     for (eid, manager, ochildren) in &managers {
         if let Some(children) = ochildren {
             for child in children {
-                commands.entity(*child).insert(Dying::new(0.0));
+                if relevant_children.contains(*child) {
+                    commands.entity(*child).insert(Dying::new(0.0));
+                }
             }
         }
-        commands.entity(eid).despawn_descendants();
         let mut new_progress_map = HashMap::new();
         let state_data = manager.get_state().to_state_data();
         for (ix, (body, overwrite)) in state_data.overwritten_bodies.into_iter().enumerate() {

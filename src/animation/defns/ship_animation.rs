@@ -1,24 +1,77 @@
 use super::*;
 
 defn_animation!(
-    AnimationShip,
+    AnimationShipBody,
     bodies: [
-        ship: {
-            path: "play/egg.png",
+        core: {
+            path: "ship/ship_body.png",
             size: (24, 24),
         },
+        light: {
+            path: "ship/ship_body_light.png",
+            size: (24, 24),
+            render_layers: LightLayer::render_layers(),
+        },
         spotlight: {
-            path: "play/spotlight.png",
-            size: (48, 48),
-            scale: (2.0, 2.0),
+            path: "ship/ship_spotlight.png",
+            size: (96, 96),
+            render_layers: LightLayer::render_layers(),
+        }
+    ],
+    states: [
+        Default: {
+            parts: [
+                core,
+                light,
+                spotlight,
+            ],
+        },
+    ],
+);
+
+defn_animation!(
+    AnimationShipGun,
+    bodies: [
+        core: {
+            path: "ship/ship_gun.png",
+            size: (24, 24),
+            offset: Vec3::new(0.0, 0.0, 0.1),
+        },
+        light: {
+            path: "ship/ship_gun_light.png",
+            size: (24, 24),
             render_layers: LightLayer::render_layers(),
         },
     ],
     states: [
-        Cruise: {
+        Default: {
             parts: [
-                ship,
-                spotlight,
+                core,
+                light,
+            ],
+        },
+    ],
+);
+
+defn_animation!(
+    AnimationShipTail,
+    bodies: [
+        core: {
+            path: "ship/ship_tail.png",
+            size: (24, 24),
+            offset: Vec3::new(0.0, 0.0, -0.1),
+        },
+        light: {
+            path: "ship/ship_tail_light.png",
+            size: (24, 24),
+            render_layers: LightLayer::render_layers(),
+        },
+    ],
+    states: [
+        Default: {
+            parts: [
+                core,
+                light,
             ],
         },
     ],

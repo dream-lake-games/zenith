@@ -41,11 +41,26 @@ fn update_bullet_time(mut bullet_time: ResMut<BulletTime>, time: Res<Time>) {
     bullet_time.main_duration = time.delta().mul_f32(bullet_time.time_factor);
 }
 
+fn drive_bullet_time(
+    mut bullet_time: ResMut<BulletTime>,
+    ships: Query<&ShipLaunchState, With<Ship>>,
+) {
+    let any_ship_launching = ships
+        .iter()
+        .any(|launch_state| launch_state.current_launch.is_some());
+    if any_ship_launching {
+        bullet_time.set_slow();
+    } else {
+        bullet_time.set_normal();
+    }
+}
+
 pub(super) struct BulletTimePlugin;
 impl Plugin for BulletTimePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<BulletTime>();
         app.insert_resource(BulletTime::new());
         app.add_systems(First, update_bullet_time);
+        app.add_systems(Update, drive_bullet_time);
     }
 }

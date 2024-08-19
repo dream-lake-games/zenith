@@ -135,11 +135,18 @@ impl SimpleParticleSpawner {
         self
     }
 
-    pub fn do_spawn(&self, base_pos: Vec2, commands: &mut Commands, proot: &ParticlesRoot) {
+    pub fn do_spawn(
+        &self,
+        gtran: &GlobalTransform,
+        commands: &mut Commands,
+        proot: &ParticlesRoot,
+    ) {
+        let (pos, angle) = gtran.pos_n_angle();
         for offset in &self.poses {
+            let correct_offset = offset.my_rotate(angle);
             for reference in &self.references {
                 commands
-                    .spawn(reference.clone().with_pos(base_pos + *offset))
+                    .spawn(reference.clone().with_pos(pos + correct_offset))
                     .set_parent(proot.eid());
             }
         }
@@ -252,7 +259,7 @@ fn update_particles_internal(
         tran.translation.z -= bullet_time.delta_seconds();
     }
     for (simple_spawner, gtran) in &simple_spawners {
-        simple_spawner.do_spawn(gtran.translation().truncate(), &mut commands, &proot);
+        simple_spawner.do_spawn(&gtran, &mut commands, &proot);
     }
 }
 
@@ -274,5 +281,6 @@ impl Plugin for ParticlesPlugin {
 
         app.register_type::<ParticleInternal>();
         app.register_type::<DynoAwareParticleSpawner>();
+        app.register_type::<SimpleParticleSpawner>();
     }
 }

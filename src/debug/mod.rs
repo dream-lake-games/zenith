@@ -35,10 +35,16 @@ fn set_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
     config.render_layers = SpriteLayer::render_layers();
 }
 
-fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
+fn debug_startup(
+    mut commands: Commands,
+    camera_root: Res<DynamicCameraRoot>,
+    ship_base_consts: Res<ShipBaseConstants>,
+) {
     let room_state = RoomState::xth_encounter(EncounterKind::SimpOnly, 1);
 
-    let _ship_id = commands.spawn(ShipBundle::new(default(), &room_state)).id();
+    let _ship_id = commands
+        .spawn(ShipBundle::new(default(), &room_state, &ship_base_consts))
+        .id();
 
     commands.spawn(PlanetBundle::new(
         "wrap1",
@@ -73,19 +79,10 @@ fn debug_startup(mut commands: Commands, camera_root: Res<DynamicCameraRoot>) {
 fn debug_update(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut bullet_time: ResMut<BulletTime>,
-    mut launch: EventReader<Launch>,
     mut fire: EventReader<Fire>,
-    mut ship: Query<(Entity, &mut DynoTran, &mut Transform), With<Ship>>,
     mut planet_textures: Query<&mut TextureManager<TextureTestPlanetState>>,
     room_state: Res<State<RoomState>>,
 ) {
-    if keyboard.just_pressed(KeyCode::BracketLeft) {
-        bullet_time.set_normal();
-    }
-    if keyboard.just_pressed(KeyCode::BracketRight) {
-        bullet_time.set_slow();
-    }
     if keyboard.just_pressed(KeyCode::Space) {
         for mut planet_texture in &mut planet_textures {
             let next_color = match planet_texture.get_state() {
@@ -97,13 +94,6 @@ fn debug_update(
     }
     if keyboard.just_pressed(KeyCode::Backspace) {
         commands.spawn(SuicidoBundle::new(Vec2::new(0.0, -10.0), &room_state.get()));
-    }
-    for evt in launch.read() {
-        for (eid, mut dyno_tran, mut tran) in &mut ship {
-            commands.entity(eid).remove::<Stuck>();
-            dyno_tran.vel = evt.0;
-            tran.set_angle(evt.0.to_angle());
-        }
     }
     for _ in fire.read() {
         // println!("fire!");
