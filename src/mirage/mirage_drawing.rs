@@ -12,6 +12,12 @@ impl MirageAnimationManager {
             offsets: room_state.mirage_offsets(),
         }
     }
+
+    pub fn wrap_offsets(wrap: Vec2) -> Self {
+        Self {
+            offsets: wrap_offsets(wrap),
+        }
+    }
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

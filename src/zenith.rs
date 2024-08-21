@@ -8,6 +8,7 @@ pub mod debug;
 pub mod enemy;
 pub mod environment;
 pub mod input;
+pub mod juice;
 pub mod layer;
 pub mod lifecycle;
 pub mod macros;
@@ -17,6 +18,7 @@ pub mod particles;
 pub mod physics;
 pub mod roots;
 pub mod ship;
+pub mod sound;
 pub mod state;
 
 pub mod prelude {
@@ -27,6 +29,7 @@ pub mod prelude {
     pub use super::enemy::*;
     pub use super::environment::*;
     pub use super::input::*;
+    pub use super::juice::*;
     pub use super::layer::*;
     pub use super::lifecycle::*;
     pub use super::macros::*;
@@ -36,11 +39,13 @@ pub mod prelude {
     pub use super::physics::*;
     pub use super::roots::*;
     pub use super::ship::*;
+    pub use super::sound::*;
     pub use super::state::*;
     pub use bevy::color::palettes::tailwind;
     pub use bevy::input::common_conditions::input_toggle_active;
     pub use bevy::math::VectorSpace;
     pub use bevy::prelude::*;
+    pub use bevy::reflect::GetTypeRegistration;
     pub use bevy::render::view::*;
     pub use bevy::utils::{HashMap, HashSet};
     pub use bevy_inspector_egui::quick::ResourceInspectorPlugin;
@@ -65,12 +70,14 @@ pub fn launch_app(mut app: App) {
     app.add_plugins(enemy::EnemyPlugin);
     app.add_plugins(environment::EnvironmentPlugin);
     app.add_plugins(input::CommonInputPlugin);
+    app.add_plugins(juice::JuicePlugin);
     app.add_plugins(lifecycle::LifecyclePlugin);
     app.add_plugins(mirage::MiragePlugin);
     app.add_plugins(particles::ParticlesPlugin);
     app.add_plugins(physics::PhysicsPlugin);
     app.add_plugins(roots::RootPlugin);
     app.add_plugins(ship::ShipPlugin);
+    app.add_plugins(sound::SoundPlugin);
     app.add_plugins(state::StatePlugin);
     app.run();
 }

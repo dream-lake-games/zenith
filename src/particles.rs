@@ -9,9 +9,9 @@ pub struct ParticlesSet;
 #[derive(Component, Clone, Reflect)]
 pub struct Particle {
     pos: Vec2,
-    vel: Option<Vec2>,
-    render_layers: RenderLayers,
-    internal: ParticleInternal,
+    pub vel: Option<Vec2>,
+    pub render_layers: RenderLayers,
+    pub internal: ParticleInternal,
 }
 impl Particle {
     pub fn new(pos: Vec2) -> Self {
@@ -154,13 +154,13 @@ impl SimpleParticleSpawner {
 }
 
 #[derive(Component, Clone, Reflect)]
-struct ParticleInternal {
-    lifespan: Timer,
-    spleen: Spleen,
-    start_color: Srgba,
-    end_color: Srgba,
-    start_size: f32,
-    end_size: f32,
+pub struct ParticleInternal {
+    pub lifespan: Timer,
+    pub spleen: Spleen,
+    pub start_color: Srgba,
+    pub end_color: Srgba,
+    pub start_size: f32,
+    pub end_size: f32,
 }
 impl Default for ParticleInternal {
     fn default() -> Self {

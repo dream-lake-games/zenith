@@ -1,4 +1,3 @@
-use bevy::reflect::GetTypeRegistration;
 use dphysics::ShowPhysicsBounds;
 
 use crate::prelude::*;

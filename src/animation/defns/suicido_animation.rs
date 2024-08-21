@@ -19,7 +19,18 @@ defn_animation!(
             path: "enemies/suicido/explode.png",
             size: (16, 16),
             length: 4,
-            fps: 12.0,
+            fps: 8.0,
+        },
+        stable_light: {
+            path: "enemies/suicido/pinkball_light_stable.png",
+            size: (28, 28),
+            render_layers: LightLayer::render_layers(),
+        },
+        charging_light: {
+            path: "enemies/suicido/pinkball_light_charging.png",
+            size: (28, 28),
+            length: 2,
+            render_layers: LightLayer::render_layers(),
         },
         warning_circle: {
             path: "enemies/suicido/warning_circle.png",
@@ -39,16 +50,19 @@ defn_animation!(
         Charge: {
             parts: [
                 charge,
+                charging_light,
             ],
         },
         Launch: {
             parts: [
                 launch,
+                stable_light,
             ],
         },
         Explode: {
             parts: [
                 explode,
+                stable_light,
                 warning_circle,
                 warning_circle_light,
             ],

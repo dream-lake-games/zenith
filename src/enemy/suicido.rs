@@ -17,7 +17,7 @@ impl Default for SuicidoConstants {
         Self {
             rot_speed: PI * 2.0,
             charge_drag: 0.95,
-            charge_time: 0.5,
+            charge_time: 1.0,
             wander_launch_speed: 50.0,
             engaged_launch_speed: 90.0,
             max_launch_time: 2.0,
@@ -84,6 +84,7 @@ pub struct SuicidoBundle {
     mirage: MirageAnimationManager,
     engage: PatrolWatch<Ship, EngageVision>,
     charging: Charging,
+    dyno_particles: DynoAwareParticleSpawner,
 }
 impl SuicidoBundle {
     pub fn new(pos: Vec2, room_state: &RoomState) -> Self {
@@ -107,6 +108,13 @@ impl SuicidoBundle {
                 radius: 100.0,
             })),
             charging: Charging::default(),
+            dyno_particles: DynoAwareParticleSpawner::new(vec![Particle::new(Vec2::ZERO)
+                .with_colors(
+                    tailwind::PINK_600.into(),
+                    Srgba::new(0.0, 0.0, 0.0, 0.0).into(),
+                )
+                .with_sizes(4.0, 2.0)
+                .with_lifespan(0.5)]),
         }
     }
 }
@@ -157,6 +165,7 @@ fn update_charging_suicidos(
             &mut Transform,
             &GlobalTransform,
             Option<&PatrolActive<EngageVision>>,
+            Option<&mut SimpleParticleSpawner>,
         ),
         With<Suicido>,
     >,
@@ -170,7 +179,7 @@ fn update_charging_suicidos(
         .map(|r| r.room_size)
         .unwrap_or(IDEAL_VEC)
         .as_vec2();
-    for (eid, mut charging, mut dyno_tran, mut tran, gtran, engaged) in &mut suicidos {
+    for (eid, mut charging, mut dyno_tran, mut tran, gtran, engaged, mut spawner) in &mut suicidos {
         // Update the charge goal if needed
         match charging.goal.clone() {
             ChargeGoal::Angle { .. } => {
@@ -214,11 +223,26 @@ fn update_charging_suicidos(
                 time: 0.0,
             });
             let speed = if dist_to_goal_sq.is_some() {
+                commands.spawn(RingShrink::new(tran.clone()));
                 constants.engaged_launch_speed
             } else {
                 constants.wander_launch_speed
             };
             dyno_tran.vel = Vec2::X.my_rotate(my_ang) * speed;
+        }
+        // Update particle spawner
+        if let Some(spawner) = spawner.as_mut() {
+            let frac = charging.time / constants.charge_time;
+            spawner.references[0].internal.start_color = Srgba::new(
+                1.0,
+                (130.0 / 255.0) * (1.0 - frac).powi(2),
+                (150.0 / 255.0) * (1.0 - frac).powi(2),
+                1.0,
+            );
+            let vel = Vec2::X.my_rotate(gtran.pos_n_angle().1 + PI) * (40.0 + 160.0 * frac * frac);
+            for reference in spawner.references.iter_mut() {
+                reference.vel = Some(vel);
+            }
         }
     }
 }
@@ -292,8 +316,9 @@ fn update_launching_suicidos(
                 None => moving_away
                     .map(|last_eid| ChargeGoal::Entity { eid: last_eid })
                     .unwrap_or(ChargeGoal::Angle {
-                        speed: thread_rng()
-                            .gen_range((-constants.rot_speed)..(constants.rot_speed)),
+                        speed: thread_rng().gen_range(
+                            (-constants.rot_speed / 100.0)..(constants.rot_speed / 100.0),
+                        ),
                     }),
             };
             commands.entity(eid).remove::<Launching>();
@@ -362,6 +387,38 @@ fn update_suicido_animations(
     }
 }
 
+fn add_or_remove_particle_spawners(
+    mut commands: Commands,
+    add_to: Query<Entity, (With<Suicido>, Added<Charging>)>,
+    remove_from: Query<Entity, (With<Suicido>, Without<Charging>)>,
+    remove_dyno_aware: Query<Entity, (With<Suicido>, Added<Exploding>)>,
+) {
+    let core_particle = Particle::new(Vec2::ZERO)
+        .with_colors(
+            Srgba::rgb_u8(255, 130, 150).into(),
+            Srgba::new(1.0, 1.0, 1.0, 0.0).into(),
+        )
+        .with_lifespan(0.25)
+        .with_sizes(7.0, 2.0);
+    let light_particle = Particle::new(Vec2::ZERO)
+        .with_colors(Color::WHITE, Srgba::new(1.0, 1.0, 1.0, 0.0).into())
+        .with_lifespan(0.17)
+        .with_sizes(7.0, 2.0)
+        .with_render_layers(LightLayer::render_layers());
+    for eid in &add_to {
+        commands.entity(eid).insert(SimpleParticleSpawner::new(vec![
+            core_particle.clone(),
+            light_particle.clone(),
+        ]));
+    }
+    for eid in &remove_from {
+        commands.entity(eid).remove::<SimpleParticleSpawner>();
+    }
+    for eid in &remove_dyno_aware {
+        commands.entity(eid).remove::<DynoAwareParticleSpawner>();
+    }
+}
+
 #[derive(Component, Debug, Clone, Reflect)]
 struct ExplosionCircle;
 
@@ -400,6 +457,7 @@ pub(super) fn register_suicidos(app: &mut App) {
             update_launching_suicidos,
             update_exploding_suicidos,
             update_suicido_animations,
+            add_or_remove_particle_spawners,
         )
             .after(PhysicsSet),
     );

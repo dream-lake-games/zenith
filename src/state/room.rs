@@ -99,6 +99,19 @@ impl RoomState {
     }
 }
 
+pub fn wrap_offsets(wrap: Vec2) -> Vec<Vec2> {
+    let mut offsets = vec![];
+    for xmul in [-1.0, 0.0, 1.0] {
+        for ymul in [-1.0, 0.0, 1.0] {
+            if xmul == 0.0 && ymul == 0.0 {
+                continue;
+            }
+            offsets.push(Vec2::new(wrap.x * xmul, wrap.y * ymul));
+        }
+    }
+    offsets
+}
+
 impl ComputedStates for EncounterKind {
     type SourceStates = MetaState;
 

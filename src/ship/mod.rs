@@ -79,6 +79,7 @@ pub struct ShipBundle {
     animation_body: AnimationManager<AnimationShipBody>,
     camera_leader: DynamicCameraLeader,
     wrap_room: RoomWrap,
+    dyno_particles: DynoAwareParticleSpawner,
 }
 impl ShipBundle {
     pub fn new(pos: Vec2, room_state: &RoomState, base_consts: &ShipBaseConstants) -> Self {
@@ -112,6 +113,14 @@ impl ShipBundle {
             animation_body: AnimationManager::new(),
             camera_leader: DynamicCameraLeader,
             wrap_room: RoomWrap,
+            dyno_particles: DynoAwareParticleSpawner::new(vec![Particle::new(Vec2::ZERO)
+                .with_colors(
+                    tailwind::GREEN_300.into(),
+                    Srgba::new(0.0, 1.0, 0.0, 0.0).into(),
+                )
+                .with_sizes(3.0, 1.0)
+                .with_lifespan(0.75)])
+            .with_poses(vec![Vec2::new(-5.0, 5.0), Vec2::new(-5.0, -5.0)]),
         }
     }
 }
@@ -225,12 +234,16 @@ fn update_ship_launch(
                     force_launch.send(ForceLaunch);
                 }
                 if let Some(launch) = launches.read().last() {
+                    // DO THE LAUNCH
                     commands.entity(eid).remove::<Stuck>();
                     dyno_tran.vel = launch.0;
                     if launch.0.length_squared() > 0.1 {
                         tran.set_angle(launch.0.to_angle());
                     }
                     launch_state.current_launch = None;
+                    let mut shrink_tran = tran.clone();
+                    shrink_tran.translation.z -= 1.0;
+                    commands.spawn(RingShrink::new(tran.clone()));
                 }
             }
             None => {
