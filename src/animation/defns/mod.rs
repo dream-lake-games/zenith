@@ -21,6 +21,7 @@ impl Plugin for AnimationDefnsPlugin {
         register_animation_manager::<AnimationShipBody>(app);
         register_animation_manager::<AnimationShipGun>(app);
         register_animation_manager::<AnimationShipTail>(app);
+        register_animation_manager::<AnimationShipBulletDefault>(app);
         register_animation_manager::<AnimationStar>(app);
         register_animation_manager::<AnimationSuicidoBody>(app);
         register_animation_manager::<AnimationSuicidoExplosionCircle>(app);

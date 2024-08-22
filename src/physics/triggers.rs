@@ -5,6 +5,8 @@ use crate::prelude::*;
 pub enum TriggerKind {
     /// Basically marks the hitbox of the protagonist
     Ship,
+    /// Bullet fired by the protagonist
+    ShipBullet,
 }
 
 /// Marks an object as being a trigger provider

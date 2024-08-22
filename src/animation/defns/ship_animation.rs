@@ -76,3 +76,29 @@ defn_animation!(
         },
     ],
 );
+
+defn_animation!(
+    AnimationShipBulletDefault,
+    bodies: [
+        core: {
+            path: "ship/weapons/bullet.png",
+            size: (10, 10),
+            offset: Vec3::new(0.0, 0.0, -0.2),
+            scale: (0.5, 0.5),
+        },
+        light: {
+            path: "ship/weapons/bullet.png",
+            size: (10, 10),
+            scale: (0.5, 0.5),
+            render_layers: LightLayer::render_layers(),
+        },
+    ],
+    states: [
+        Default: {
+            parts: [
+                core,
+                light,
+            ],
+        },
+    ],
+);

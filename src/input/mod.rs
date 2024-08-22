@@ -44,6 +44,10 @@ pub struct ForceLaunch;
 #[derive(Event)]
 pub struct Launch(pub Vec2);
 
+/// An event that forces the fire to terminate
+#[derive(Event)]
+pub struct ForceFire;
+
 /// Event that corresponds to input that _should_ fire a bullet.
 /// NOTE: It is the responsibility of other systems to monitor the ship resources,
 /// i.e. determine if it actually CAN go shooting rn
@@ -76,6 +80,7 @@ impl Plugin for CommonInputPlugin {
 
         // Events
         app.add_event::<ForceLaunch>();
+        app.add_event::<ForceFire>();
         app.add_event::<Launch>();
         app.add_event::<Fire>();
         app.add_event::<ConvoGoNext>();

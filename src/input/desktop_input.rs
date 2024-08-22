@@ -11,6 +11,7 @@ fn update_drag_input(
     mut fire_writer: EventWriter<Fire>,
     ideal_mult: Res<IdealMult>,
     mut force_launches: EventReader<ForceLaunch>,
+    mut force_fires: EventReader<ForceFire>,
 ) {
     let window = q_windows.single();
     let Some(mouse_pos) = window.cursor_position() else {
@@ -18,6 +19,7 @@ fn update_drag_input(
         return;
     };
     let should_force_launch = force_launches.read().last().is_some();
+    let should_force_fire = force_fires.read().last().is_some();
     // TODO: Once we have a camera, screen/world pos calc needs to change
     let screen_pos = Vec2::new(
         mouse_pos.x - IDEAL_WIDTH_f32 * ideal_mult.0 / 2.0,
@@ -45,7 +47,10 @@ fn update_drag_input(
         Some(screen_pos)
     } else {
         if let Some(drag_start) = state.right_drag_start {
-            if !buttons.pressed(MouseButton::Right) || buttons.just_released(MouseButton::Right) {
+            if !buttons.pressed(MouseButton::Right)
+                || buttons.just_released(MouseButton::Right)
+                || should_force_fire
+            {
                 fire_writer.send(Fire(drag_start - screen_pos));
                 None
             } else {
