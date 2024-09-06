@@ -11,9 +11,9 @@ struct ShipBulletConstants {
 impl Default for ShipBulletConstants {
     fn default() -> Self {
         Self {
-            distspan: 100.0,
+            distspan: 1000.0,
             explosion_radius: 10.0,
-            bullet_speed: 160.0,
+            bullet_speed: 1000.0,
         }
     }
 }

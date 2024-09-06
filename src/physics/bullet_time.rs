@@ -43,12 +43,13 @@ fn update_bullet_time(mut bullet_time: ResMut<BulletTime>, time: Res<Time>) {
 
 fn drive_bullet_time(
     mut bullet_time: ResMut<BulletTime>,
-    ships: Query<&ShipLaunchState, With<Ship>>,
+    ship_launches: Query<&ShipLaunchState, With<Ship>>,
 ) {
-    let any_ship_launching = ships
+    let any_ship_launching = ship_launches
         .iter()
         .any(|launch_state| launch_state.current_launch.is_some());
-    if any_ship_launching {
+    let any_ship_firing = false;
+    if any_ship_launching || any_ship_firing {
         bullet_time.set_slow();
     } else {
         bullet_time.set_normal();

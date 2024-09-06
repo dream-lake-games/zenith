@@ -2,8 +2,10 @@ use crate::prelude::*;
 
 mod launch_juice;
 pub mod ship_bullet;
+pub mod ship_cannon;
 
 pub use ship_bullet::*;
+use ship_cannon::*;
 
 #[derive(Resource, Reflect)]
 pub struct ShipBaseConstants {
@@ -32,11 +34,6 @@ pub struct ShipSet;
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct Ship;
-
-#[derive(Component, Debug, Clone, Reflect, Default)]
-pub struct ShipGun {
-    grot: f32,
-}
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct ShipTail;
@@ -75,45 +72,13 @@ struct ShipLaunching {
     time_left: f32,
 }
 
-#[derive(Component, Debug, Clone, Reflect)]
-pub struct ShipFireState {
-    /// How many launches the ship currently has
-    pub num_fires: u32,
-    /// How many total launches can the ship store at once
-    pub max_num_fires: u32,
-    /// How long can we be in launch-bullet time before we force fire?
-    pub max_fire_time: f32,
-    /// The current launch (how long we've spent launching), None if not launchingA
-    pub current_fire: Option<f32>,
-    /// How long does it take the ship to recharge a single launch
-    pub fire_recharge_time: f32,
-    /// The current recharge timer, None if num_fires = max_num_fires
-    pub current_recharge: Option<f32>,
-}
-impl ShipFireState {
-    pub fn new(max_num_fires: u32, max_fire_time: f32, fire_recharge_time: f32) -> Self {
-        Self {
-            num_fires: max_num_fires,
-            max_num_fires,
-            max_fire_time,
-            current_fire: None,
-            fire_recharge_time,
-            current_recharge: None,
-        }
-    }
-}
-
-#[derive(Component, Debug, Clone, Reflect)]
-struct ShipFiring {
-    time_left: f32,
-}
-
 #[derive(Bundle)]
 pub struct ShipBundle {
     name: Name,
     ship: Ship,
+    ship_cannon: ShipCannon,
+    ship_ammo: ShipAmmo,
     ship_launch_state: ShipLaunchState,
-    ship_fire_state: ShipFireState,
     spatial: SpatialBundle,
     dyno_tran: DynoTran,
     static_rx: StaticRx,
@@ -136,17 +101,14 @@ impl ShipBundle {
         }
         Self {
             name: Name::new("ship"),
-            spatial: spat_tran!(pos.x, pos.y, ZIX_SHIP),
             ship: Ship,
+            ship_cannon: ShipCannon::new(),
+            ship_ammo: ShipAmmo::new(3.0),
+            spatial: spat_tran!(pos.x, pos.y, ZIX_SHIP),
             ship_launch_state: ShipLaunchState::new(
                 base_consts.max_num_launches,
                 base_consts.max_launch_time,
                 base_consts.launch_recharge_time,
-            ),
-            ship_fire_state: ShipFireState::new(
-                base_consts.max_num_fires,
-                base_consts.max_fire_time,
-                base_consts.fire_recharge_time,
             ),
             dyno_tran: default(),
             static_rx: StaticRx::from_kind_n_shape(
@@ -174,24 +136,6 @@ impl ShipBundle {
 }
 
 #[derive(Bundle)]
-struct ShipGunBundle {
-    name: Name,
-    ship_gun: ShipGun,
-    spatial: SpatialBundle,
-    animation_gun: AnimationManager<AnimationShipGun>,
-}
-impl ShipGunBundle {
-    pub fn new() -> Self {
-        Self {
-            name: Name::new("ship_gun"),
-            ship_gun: ShipGun::default(),
-            spatial: default(),
-            animation_gun: AnimationManager::new(),
-        }
-    }
-}
-
-#[derive(Bundle)]
 struct ShipTailBundle {
     name: Name,
     ship_tail: ShipTail,
@@ -213,7 +157,6 @@ impl ShipTailBundle {
 fn spawn_ship_parts(
     mut commands: Commands,
     ship: Query<(Entity, Option<&Children>), With<Ship>>,
-    guns: Query<Entity, With<ShipGun>>,
     tails: Query<Entity, With<ShipTail>>,
 ) {
     for (eid, ochildren) in &ship {
@@ -221,7 +164,6 @@ fn spawn_ship_parts(
         let spawn_tail;
         match ochildren {
             Some(children) => {
-                spawn_gun = !children.iter().any(|cid| guns.contains(*cid));
                 spawn_tail = !children.iter().any(|cid| tails.contains(*cid));
             }
             None => {
@@ -229,31 +171,9 @@ fn spawn_ship_parts(
                 spawn_tail = true;
             }
         }
-        if spawn_gun {
-            commands.spawn(ShipGunBundle::new()).set_parent(eid);
-        }
         if spawn_tail {
             commands.spawn(ShipTailBundle::new()).set_parent(eid);
         }
-    }
-}
-
-fn rotate_ship_gun(
-    drag_input: Res<DragInput>,
-    ships: Query<&Transform, (With<Ship>, Without<ShipGun>)>,
-    mut guns: Query<(&mut ShipGun, &mut Transform, &Parent)>,
-) {
-    for (mut gun, mut tran, parent) in &mut guns {
-        let prot = ships.get(parent.get()).unwrap().pos_n_angle().1;
-        if let Some(start_pos) = drag_input.get_right_drag_start() {
-            let diff = drag_input.get_screen_pos() - start_pos;
-            if diff.length_squared() > 0.1 {
-                let ang = diff.to_angle() + PI;
-                gun.grot = ang;
-            }
-            // tran.set_angle(-prot + ang);
-        }
-        tran.set_angle(-prot + gun.grot);
     }
 }
 
@@ -325,89 +245,14 @@ fn update_ship_launch(
     }
 }
 
-/// Handles starting a `current_fire`, ending, and recharging
-fn update_ship_fire(
-    mut commands: Commands,
-    drag_input: Res<DragInput>,
-    mut ships: Query<(Entity, &mut ShipFireState, &Transform, &DynoTran), With<Ship>>,
-    time: Res<Time>,
-    bullet_time: Res<BulletTime>,
-    mut fires: EventReader<Fire>,
-    mut force_fire: EventWriter<ForceFire>,
-    room_state: Res<State<RoomState>>,
-    room_root: Res<RoomRoot>,
-) {
-    // First handle firing
-    for (_eid, mut fire_state, tran, dyno_tran) in &mut ships {
-        match fire_state.current_fire {
-            Some(fire_time) => {
-                if fire_time < fire_state.max_fire_time {
-                    // Continue charging the fire, no need to force fire
-                    fire_state.current_fire = Some(fire_time + time.delta_seconds());
-                } else {
-                    // Force fire
-                    // See launch above for a warning about a potential one frame bug. Idk if it actually matters tho. Shrug.
-                    force_fire.send(ForceFire);
-                }
-                if let Some(fire) = fires.read().last() {
-                    // DO THE FIRE
-                    fire_state.current_fire = None;
-                    if fire.0.length_squared() > 0.1 {
-                        let ang = fire.0.to_angle();
-                        let spawn_loc = tran.pos_n_angle().0 + Vec2::X.my_rotate(ang) * 4.0;
-                        commands
-                            .spawn(ShipBulletBundle::new(
-                                spawn_loc,
-                                dyno_tran.vel,
-                                ang,
-                                &room_state,
-                            ))
-                            .set_parent(room_root.eid());
-                    }
-                }
-            }
-            None => {
-                if fire_state.num_fires > 0 && drag_input.get_right_drag_start().is_some() {
-                    fire_state.current_fire = Some(0.0);
-                    fire_state.num_fires -= 1;
-                }
-            }
-        }
-    }
-    // Then handle recharging
-    for (_, mut fire_state, _, _) in &mut ships {
-        match fire_state.current_recharge {
-            Some(recharge_time) => {
-                if recharge_time > fire_state.fire_recharge_time {
-                    fire_state.num_fires = fire_state.max_num_fires.min(fire_state.num_fires + 1);
-                    fire_state.current_recharge = None;
-                } else {
-                    fire_state.current_recharge = Some(recharge_time + bullet_time.delta_seconds());
-                }
-            }
-            None => {
-                if fire_state.num_fires < fire_state.max_num_fires {
-                    fire_state.current_recharge = Some(0.0);
-                }
-            }
-        }
-    }
-}
-
 pub(super) struct ShipPlugin;
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Ship>();
         app.register_type::<ShipLaunchState>();
-        app.register_type::<ShipGun>();
         app.register_type::<ShipTail>();
 
-        app.add_systems(PostUpdate, rotate_ship_gun.in_set(ShipSet));
-
-        app.add_systems(
-            Update,
-            (update_ship_launch, update_ship_fire).in_set(ShipSet),
-        );
+        app.add_systems(Update, (update_ship_launch).in_set(ShipSet));
 
         app.add_systems(
             PostUpdate,
@@ -419,5 +264,6 @@ impl Plugin for ShipPlugin {
 
         launch_juice::register_launch_juice(app);
         ship_bullet::register_ship_bullet(app);
+        ship_cannon::register_ship_cannon(app);
     }
 }

@@ -30,7 +30,7 @@ defn_animation!(
 );
 
 defn_animation!(
-    AnimationShipGun,
+    AnimationShipCannon,
     bodies: [
         core: {
             path: "ship/ship_gun.png",
